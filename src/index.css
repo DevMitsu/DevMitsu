@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+
+/* Alexandria Classic design tokens */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'DM Serif Display', Georgia, serif;
+
+  --color-canvas: #f7f8f5;
+  --color-panel: #ffffff;
+  --color-navy: #172a3a;
+  --color-primary: #356859;
+  --color-primary-hover: #284f44;
+  --color-ink: #202a33;
+  --color-muted: #697681;
+  --color-line: #e1e6e3;
+  --color-sage: #dceae2;
+  --color-amber: #b7791f;
+
+  /* Tints derived from the palette, used only for secondary surfaces */
+  --color-navy-hover: #213a4e;
+  --color-navy-line: #2b4357;
+  --color-navy-text: #b9c6cf;
+  --color-sage-soft: #eef4f0;
+  --color-amber-soft: #f7eddb;
+
+  --radius-control: 8px;
+  --radius-panel: 12px;
+}
+
+@layer base {
+  html {
+    background: var(--color-canvas);
+  }
+  body {
+    @apply bg-canvas font-sans text-ink antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .on-navy :focus-visible {
+    outline-color: var(--color-sage);
+  }
+  dialog::backdrop {
+    background: rgb(23 42 58 / 0.5);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

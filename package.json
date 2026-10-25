@@ -1,0 +1,38 @@
+{
+  "name": "alexandria",
+  "version": "0.1.0",
+  "description": "Alexandria school library management - Stage 1 homepage prototype",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "typecheck": "tsc",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevMitsu/DevMitsu.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DevMitsu/DevMitsu/issues"
+  },
+  "homepage": "https://github.com/DevMitsu/DevMitsu#readme",
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/dm-serif-display": "^5.3.0",
+    "lucide-react": "^1.61.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  },
+  "private": "true",
+  "type": "module"
+}
