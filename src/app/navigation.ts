@@ -1,12 +1,5 @@
 import {
-  ArrowLeftRight,
-  CalendarCheck,
-  ChartColumn,
-  FileText,
-  GraduationCap,
-  House,
-  LibraryBig,
-  Receipt,
+  ArrowLeftRight, CalendarCheck, ChartColumn, FileText, GraduationCap, House, Inbox, LibraryBig, Receipt, SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -14,57 +7,26 @@ export interface NavItem {
   path: string;
   label: string;
   icon: LucideIcon;
-  /** Small secondary label shown beside the item, e.g. "Classwise". */
   tag?: string;
-  /** What the page will eventually do; shown on its placeholder screen. */
-  description: string;
+  /** Other path prefixes that should light up this item. */
+  also?: string[];
+  badge?: 'pending';
 }
 
-/** Planned primary navigation, in display order. Only Home is built in Stage 1. */
 export const navItems: NavItem[] = [
-  { path: '/', label: 'Home', icon: House, description: 'Your day at a glance.' },
-  {
-    path: '/entries',
-    label: 'Entries',
-    icon: ArrowLeftRight,
-    tag: 'Classwise',
-    description:
-      'A single workflow for issuing and returning books for a student, organised class by class.',
-  },
-  {
-    path: '/students',
-    label: 'Students',
-    icon: GraduationCap,
-    description: 'Student directory, classes and sections, profiles and loan history.',
-  },
-  {
-    path: '/collections',
-    label: 'Collections',
-    icon: LibraryBig,
-    description: 'Junior and Senior library catalogues, individual copies, accession numbers and shelf locations.',
-  },
-  {
-    path: '/attendance',
-    label: 'Attendance',
-    icon: CalendarCheck,
-    description: 'Library attendance records, review and discrepancy handling.',
-  },
-  {
-    path: '/stats',
-    label: 'Stats',
-    icon: ChartColumn,
-    description: 'Circulation and usage statistics.',
-  },
-  {
-    path: '/fines',
-    label: 'Fines',
-    icon: Receipt,
-    description: 'Fine assessment, payments and adjustments.',
-  },
-  {
-    path: '/reports',
-    label: 'Reports',
-    icon: FileText,
-    description: 'Printable and exportable reports.',
-  },
+  { path: '/', label: 'Home', icon: House },
+  { path: '/entries', label: 'Entries', icon: ArrowLeftRight, tag: 'Classwise', also: ['/class/'] },
+  { path: '/students', label: 'Students', icon: GraduationCap, also: ['/student/', '/teacher/'] },
+  { path: '/collections', label: 'Collections', icon: LibraryBig },
+  { path: '/attendance', label: 'Attendance', icon: CalendarCheck },
+  { path: '/stats', label: 'Stats', icon: ChartColumn },
+  { path: '/fines', label: 'Fines', icon: Receipt },
+  { path: '/reports', label: 'Reports', icon: FileText },
+  { path: '/pending', label: 'Pending', icon: Inbox, badge: 'pending' },
+  { path: '/misc', label: 'Miscellaneous', icon: SlidersHorizontal },
 ];
+
+export function isNavActive(item: NavItem, pathname: string): boolean {
+  if (item.path === '/') return pathname === '/';
+  return pathname === item.path || pathname.startsWith(item.path + '/') || !!item.also?.some((p) => pathname.startsWith(p));
+}

@@ -1,23 +1,40 @@
 import { Route, Routes } from 'react-router-dom';
+import { BorrowerFile } from '../features/circulation/BorrowerFile';
+import { ClassPage } from '../features/circulation/ClassPage';
+import { EntriesPage } from '../features/circulation/EntriesPage';
+import { AttendancePage } from '../features/attendance/AttendancePage';
+import { CollectionsPage } from '../features/collections/CollectionsPage';
+import { FinesPage } from '../features/fines/FinesPage';
 import { HomePage } from '../features/home/HomePage';
+import { MiscPage } from '../features/misc/MiscPage';
+import { PendingPage } from '../features/pending/PendingPage';
+import { ProfilePage } from '../features/profile/ProfilePage';
+import { ReportsPage } from '../features/reports/ReportsPage';
+import { StatsPage } from '../features/stats/StatsPage';
+import { StudentsPage } from '../features/people/StudentsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { PlaceholderPage } from '../pages/PlaceholderPage';
 import { AppShell } from './layout/AppShell';
-import { navItems } from './navigation';
 
-/** Routes for sections other than Home render a placeholder until they are built. */
 export function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
-        {navItems
-          .filter((item) => item.path !== '/')
-          .map((item) => (
-            <Route key={item.path} path={item.path} element={<PlaceholderPage />} />
-          ))}
-        <Route path="/profile" element={<PlaceholderPage title="Profile" description="Your account details." />} />
-        <Route path="/settings" element={<PlaceholderPage title="Settings" description="Library and account preferences." />} />
+        <Route path="entries" element={<EntriesPage />} />
+        <Route path="class/:classId" element={<ClassPage />} />
+        <Route path="students" element={<StudentsPage />} />
+        <Route path="student/:id" element={<BorrowerFile type="student" />} />
+        <Route path="teacher/:id" element={<BorrowerFile type="teacher" />} />
+        <Route path="pending" element={<PendingPage />} />
+        <Route path="collections" element={<CollectionsPage />} />
+        <Route path="attendance" element={<AttendancePage />} />
+        <Route path="stats" element={<StatsPage />} />
+        <Route path="fines" element={<FinesPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="misc" element={<MiscPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="settings" element={<PlaceholderPage title="Settings" description="Account preferences will be added later. Lending rules, teacher dues and note options are in Miscellaneous." />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

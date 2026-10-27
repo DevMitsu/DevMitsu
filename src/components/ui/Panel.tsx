@@ -5,7 +5,7 @@ import { cn } from '../../lib/cn';
 export function Panel({ className, ...rest }: HTMLAttributes<HTMLElement>) {
   return (
     <section
-      className={cn('overflow-hidden rounded-panel border border-line bg-panel', className)}
+      className={cn('relative overflow-hidden rounded-panel border border-line bg-panel', className)}
       {...rest}
     />
   );
