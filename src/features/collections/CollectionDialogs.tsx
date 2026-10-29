@@ -11,7 +11,7 @@ import { Badge } from '../../components/ui/Badge';
 import { bookById, nextAccession } from '../../domain/queries';
 import { LIBRARIES, otherLibrary } from '../../domain/rules';
 import type { Book, Collection, LibraryId } from '../../domain/types';
-import { addBook, exportBooks, removeBooks, transferBooks } from '../../store/actions';
+import { accessionClash, addBook, exportBooks, removeBooks, transferBooks } from '../../store/actions';
 import { useStore } from '../../store/store';
 
 export function AddBookDialog({ mode, library, onClose }: { mode: 'new' | 'import'; library: LibraryId; onClose: () => void }) {
@@ -28,7 +28,7 @@ export function AddBookDialog({ mode, library, onClose }: { mode: 'new' | 'impor
   const types = useMemo(() => [...new Set(state.books.map((b) => b.type))].sort(), [state.books]);
 
   useEffect(() => { if (!accEdited) setAcc(String(nextAccession(state, lib, collection))); }, [lib, collection, accEdited, state]);
-  const clash = acc ? state.books.find((b) => String(b.accession) === acc.trim()) : undefined;
+  const clash = acc && Number(acc) > 0 ? accessionClash(state.books, Number(acc), type) : undefined;
 
   const save = () => {
     const res = addBook({ title, author, type, library: lib, collection, accession: Number(acc), note: noteText(note), kind: mode });
@@ -46,7 +46,7 @@ export function AddBookDialog({ mode, library, onClose }: { mode: 'new' | 'impor
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField label="Author (optional)" value={author} onChange={setAuthor} />
           <div>
-            <TextField label="Book type" value={type} onChange={setType} list="book-types" />
+            <TextField label="Book type" value={type} onChange={setType} list="book-types" hint="Use DF for Daily Five books. They may share a number with a regular book." />
             <datalist id="book-types">{types.map((t) => <option key={t} value={t} />)}</datalist>
           </div>
         </div>

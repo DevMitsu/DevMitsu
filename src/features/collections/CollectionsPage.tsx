@@ -42,7 +42,7 @@ export function CollectionsPage() {
   const shown = rows.slice(page * PAGE, page * PAGE + PAGE);
   const counts = useMemo(() => ({ total: inLib.length, available: inLib.filter((b) => b.status === 'Available').length, issued: inLib.filter((b) => b.status === 'Issued').length }), [inLib]);
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  const dupAcc = useMemo(() => { const c = new Map<number, number>(); books.forEach((b) => c.set(b.accession, (c.get(b.accession) ?? 0) + 1)); return c; }, [books]);
+  const dupAcc = useMemo(() => { const c = new Map<string, number>(); books.forEach((b) => { const k = `${b.accession}|${b.type.toUpperCase() === 'DF'}`; c.set(k, (c.get(k) ?? 0) + 1); }); return c; }, [books]);
 
   return (
     <div>
@@ -79,9 +79,9 @@ export function CollectionsPage() {
             <tbody>{shown.map((b) => (
               <tr key={b.id} className={cn('border-b border-line last:border-b-0', sel.includes(b.id) && 'bg-sage-soft')}>
                 <td className="px-4 py-2"><input type="checkbox" aria-label={`Select ${b.title}`} checked={sel.includes(b.id)} onChange={() => toggle(b.id)} className="size-4 accent-[var(--color-primary)]" /></td>
-                <td className="px-3 py-2 font-medium tabular-nums">{b.accession}{(dupAcc.get(b.accession) ?? 0) > 1 && <span title="This number is shared with another book"> <Badge tone="amber">shared</Badge></span>}</td>
+                <td className="px-3 py-2 font-medium tabular-nums">{b.accession}{(dupAcc.get(`${b.accession}|${b.type.toUpperCase() === 'DF'}`) ?? 0) > 1 && <span title="This number is shared with another book"> <Badge tone="amber">shared</Badge></span>}</td>
                 <td className="px-3 py-2"><span className="font-medium text-ink">{b.title}</span><span className="block text-xs text-muted">{b.author ?? 'Author not recorded'}</span></td>
-                <td className="px-3 py-2"><span className="flex flex-wrap gap-1"><span className="text-muted">{b.type}</span>{b.collection === 'cambridge' && <Badge tone="navy">Cambridge</Badge>}{b.transferredFrom && <Badge>from {LIBRARIES[b.transferredFrom].short}</Badge>}</span></td>
+                <td className="px-3 py-2"><span className="flex flex-wrap gap-1"><span className="text-muted">{b.type}</span>{b.collection === 'cambridge' && <Badge tone="navy">Cambridge</Badge>}{b.type.toUpperCase() === 'DF' && <Badge tone="navy">Daily Five</Badge>}{b.transferredFrom && <Badge>from {LIBRARIES[b.transferredFrom].short}</Badge>}</span></td>
                 <td className="px-3 py-2"><Badge tone={b.status === 'Available' ? 'sage' : b.status === 'Issued' ? 'neutral' : 'amber'}>{b.status}</Badge></td>
               </tr>))}</tbody>
           </table></div>

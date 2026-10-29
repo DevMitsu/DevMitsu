@@ -10,7 +10,7 @@ import type {
   AppEvent, AppState, Book, DayId, LibraryId, Loan, Pending, Fine, Student, Teacher, Timetable,
 } from '../domain/types';
 
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 function rng(seed: number) {
   let a = seed;
@@ -87,9 +87,13 @@ function buildBooks(): Book[] {
     });
   });
   // A few accession numbers shared by different books, as in the real list, to show the "which book?" picker.
-  const share = (a: string, b: string) => { const x = books.find((k) => k.title === a)!, y = books.find((k) => k.title === b)!; y.accession = x.accession; };
-  share('Charlie and the Chocolate Factory', 'The Gruffalo');
-  share('Matilda', 'Heidi');
+  const share = (a: string, b: string, df = false) => { const x = books.find((k) => k.title === a)!, y = books.find((k) => k.title === b)!; y.accession = x.accession; if (df) y.type = 'DF'; };
+  // Daily Five (DF) books keep the same accession number as a regular book but are classed "DF".
+  share('Charlie and the Chocolate Factory', 'The Gruffalo', true);
+  share('Matilda', 'Heidi', true);
+  [['Little Red Tractor', 5], ['The Ugly Duckling', 6], ['Sleeping Beauty', 7], ['Goldilocks and the Three Bears', 8]].forEach(([title, acc]) =>
+    add({ accession: acc as number, title: title as string, author: undefined, type: 'DF', library: 'jr', collection: 'general', status: 'Available' }));
+  // A genuinely shared number (two different regular books) that still needs correcting
   share('Animal Farm', 'Atlas of the World');
   return books;
 }

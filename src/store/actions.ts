@@ -342,13 +342,17 @@ export function waiveFine(id: string, amount: number, note: string): Result {
 }
 
 // ---------- collection ----------
+export const isDF = (type: string) => type.trim().toUpperCase() === 'DF';
+/** An accession number is unique within a series: Daily Five (DF) books may share a number with a regular book. */
+export const accessionClash = (books: Book[], accession: number, type: string) =>
+  books.find((b) => b.accession === accession && isDF(b.type) === isDF(type));
 export function addBook(input: {
   title: string; author?: string; type: string; library: LibraryId; collection: Collection; accession: number; note: string; kind: 'new' | 'import';
 }): Result {
   const s = getState();
   if (!input.title.trim()) return fail('Enter the book’s title.');
   if (!Number.isInteger(input.accession) || input.accession <= 0) return fail('Enter a valid accession number.');
-  const clash = s.books.find((b) => b.accession === input.accession);
+  const clash = accessionClash(s.books, input.accession, input.type);
   if (clash) return fail(`Accession ${input.accession} is already used by “${clash.title}”. Choose another number.`);
   if (!input.note.trim()) return fail('Choose or type a note for this entry.');
   const book: Book = {

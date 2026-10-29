@@ -97,6 +97,7 @@ export function AccessionPicker({ pool, selected, onAdd, blockReason, placeholde
                     </span>
                     <Badge>{LIBRARIES[b.library].short}</Badge>
                     {b.collection === 'cambridge' && <Badge tone="navy">Cambridge</Badge>}
+                    {b.type.toUpperCase() === 'DF' && <Badge tone="navy">DF</Badge>}
                     <span className="shrink-0 text-xs text-muted">{isSel ? 'Added' : reason ?? b.status}</span>
                   </button>
                 </li>
