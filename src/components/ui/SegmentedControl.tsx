@@ -35,7 +35,7 @@ export function SegmentedControl<T extends string>({
             className={cn(
               'h-8 rounded-[6px] px-3.5 text-[13px] font-medium transition-colors',
               selected
-                ? 'bg-panel text-primary shadow-[0_0_0_1px_var(--color-line)]'
+                ? 'bg-panel text-accent shadow-[0_0_0_1px_var(--color-line)]'
                 : 'text-muted hover:text-ink',
             )}
           >

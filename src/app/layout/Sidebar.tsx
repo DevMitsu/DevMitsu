@@ -48,13 +48,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                     aria-current={active ? 'page' : undefined}
                     className={cn(
                       'flex h-10 items-center gap-3 rounded-control px-3 text-sm font-medium transition-colors',
-                      active ? 'bg-sage text-navy' : 'text-navy-text hover:bg-navy-hover hover:text-white',
+                      active ? 'bg-sage text-on-sage' : 'text-navy-text hover:bg-navy-hover hover:text-white',
                     )}
                   >
-                    <Icon className={cn('size-[18px] shrink-0', active && 'text-primary')} aria-hidden />
+                    <Icon className={cn('size-[18px] shrink-0', active && 'text-accent')} aria-hidden />
                     <span>{item.label}</span>
                     {item.tag && (
-                      <span className={cn('ml-auto rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium', active ? 'bg-white/70 text-primary' : 'bg-navy-line text-navy-text')}>{item.tag}</span>
+                      <span className={cn('ml-auto rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium', active ? 'bg-canvas/50 text-accent' : 'bg-navy-line text-navy-text')}>{item.tag}</span>
                     )}
                     {item.badge === 'pending' && pendingCount > 0 && (
                       <span aria-label={`${pendingCount} pending`} className="ml-auto rounded-[4px] bg-amber-soft px-1.5 py-0.5 text-[11px] font-semibold text-ink tabular-nums">{pendingCount}</span>

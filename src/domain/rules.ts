@@ -9,7 +9,12 @@ export const otherLibrary = (l: LibraryId): LibraryId => (l === 'jr' ? 'sr' : 'j
 /** Classes 1 to 5 use the Jr. Library; 6 to 12 use the Sr. Library. */
 export const libraryForGrade = (grade: number): LibraryId => (grade <= 5 ? 'jr' : 'sr');
 export const gradesFor = (l: LibraryId): number[] => (l === 'jr' ? [1, 2, 3, 4, 5] : [6, 7, 8, 9, 10, 11, 12]);
-export const SECTIONS = ['A', 'B', 'C', 'D'];
+export const DEFAULT_SECTIONS = ['A', 'B', 'C', 'D'];
+export const sectionsOf = (map: Record<number, string[]>, grade: number) => map[grade] ?? DEFAULT_SECTIONS;
+/** Every class id for a library, e.g. ["6A","6B",...]. */
+export const classIdsOf = (map: Record<number, string[]>, lib: LibraryId) =>
+  gradesFor(lib).flatMap((g) => sectionsOf(map, g).map((sec) => classIdOf(g, sec)));
+export const allClassIds = (map: Record<number, string[]>) => [...classIdsOf(map, 'jr'), ...classIdsOf(map, 'sr')];
 export const classIdOf = (grade: number, section: string) => `${grade}${section}`;
 export const classLabel = (id: string) => `Class ${id}`;
 export const parseClassId = (id: string): { grade: number; section: string } | null => {

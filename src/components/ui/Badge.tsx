@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn';
 type Tone = 'neutral' | 'sage' | 'green' | 'amber' | 'navy';
 const tones: Record<Tone, string> = {
   neutral: 'border border-line bg-canvas text-muted',
-  sage: 'bg-sage text-navy',
+  sage: 'bg-sage text-on-sage',
   green: 'bg-primary text-white',
   amber: 'border border-amber/50 bg-amber-soft text-ink',
   navy: 'bg-navy text-white',

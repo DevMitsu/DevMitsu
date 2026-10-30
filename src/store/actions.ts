@@ -1,11 +1,12 @@
 import { buildSeed } from '../data/seed';
-import { addDays, duesFor, fineFor, lateDays, libraryForGrade, todayISO } from '../domain/rules';
+import { addDays, duesFor, fineFor, lateDays, libraryForGrade, norm, todayISO } from '../domain/rules';
 import {
   bookById, borrowerOf, fineOwed, openLoansOf, studentById,
 } from '../domain/queries';
+import { computeRollover, type YearPlan } from '../domain/rollover';
 import type {
-  AppEvent, AppState, Book, BookStatus, Borrower, Collection, DayId, Fine, LibraryId, Loan, LostOutcome,
-  NoteCategory, Pending, Presence, SlotException, Student,
+  AppEvent, AppState, Book, BookStatus, Borrower, ChallengeEntry, Collection, DayId, Fine, LibraryId, Loan, LostOutcome,
+  Memory, NoteCategory, Pending, Prefs, Presence, SlotException, Student,
 } from '../domain/types';
 import { getState, replaceState, setState, setUndo } from './store';
 
@@ -253,13 +254,13 @@ export function processTransaction(input: TxnInput): Result {
       returned++;
       loansNext = loansNext.map((x) => (x.id === l.id ? { ...x, returnedOn: today } : x));
       booksNext = booksNext.map((b) => (b.id === l.bookId ? { ...b, status: 'Available' as BookStatus } : b));
-      const { amount } = lateFineFor(s0, borrower, l);
+      const { amount, late: lateN } = lateFineFor(s0, borrower, l);
       if (amount > 0) {
         const dec = returns.fines[l.id] ?? { waive: 0, note: '', settle: 'collected' as const };
         const payable = amount - dec.waive;
         finesNext.push({
           id: uid('f'), loanId: l.id, borrowerType: borrower.type, borrowerId: borrower.id, bookId: l.bookId, createdOn: today,
-          amount, waived: dec.waive, collected: dec.settle === 'collected' ? payable : 0, waiveNote: dec.waive > 0 ? dec.note.trim() : undefined,
+          amount, days: lateN, waived: dec.waive, collected: dec.settle === 'collected' ? payable : 0, waiveNote: dec.waive > 0 ? dec.note.trim() : undefined,
         });
         fineTotal += dec.settle === 'collected' ? payable : 0;
       }
@@ -360,7 +361,7 @@ export function addBook(input: {
     type: input.type.trim() || 'FICTION', library: input.library, collection: input.collection, status: 'Available',
   };
   const ev: AppEvent = { id: uid('e'), date: todayISO(), type: input.kind === 'import' ? 'import' : 'added', library: book.library, accession: book.accession, title: book.title, note: input.note.trim() };
-  setState((x) => ({ ...x, books: [...x.books, book], events: [ev, ...x.events] }));
+  setState((x) => ({ ...x, books: [...x.books, book], events: [ev, ...x.events], memory: remember(x.memory, { title: book.title, author: book.author, type: book.type }) }));
   return done(`Added #${book.accession} ${book.title}.`);
 }
 function blockIssued(books: Book[]): string[] {
@@ -402,6 +403,88 @@ export function transferBooks(input: { bookIds: string[]; to: LibraryId; note: s
   const ids = new Set(books.map((b) => b.id));
   setState((x) => ({ ...x, books: x.books.map((b) => (ids.has(b.id) ? { ...b, library: input.to, transferredFrom: b.library } : b)), events: [...evs, ...x.events] }));
   return done(`${books.length} book${books.length > 1 ? 's' : ''} transferred.`);
+}
+
+// ---------- memory: genres, titles and authors typed before ----------
+export function remember(m: Memory, v: { title?: string; author?: string; type?: string }): Memory {
+  const types = v.type?.trim() && !m.types.some((t) => norm(t) === norm(v.type)) ? [...m.types, v.type.trim()] : m.types;
+  const authors = v.author?.trim() && !m.authors.some((a) => norm(a) === norm(v.author)) ? [...m.authors, v.author.trim()] : m.authors;
+  const has = v.title && m.titles.some((t) => norm(t.title) === norm(v.title));
+  const titles = v.title?.trim() && !has ? [...m.titles, { title: v.title.trim(), author: v.author?.trim() || undefined, type: v.type?.trim() || undefined }] : m.titles;
+  return { types, authors, titles };
+}
+
+// ---------- preferences ----------
+export function setPrefs(patch: Partial<Prefs>) {
+  setState((s) => ({ ...s, prefs: { ...s.prefs, ...patch } }));
+}
+export function backupJson(): string {
+  const { passwords: _pw, ...rest } = getState();
+  return JSON.stringify(rest, null, 2);
+}
+
+// ---------- reading challenge ----------
+export function logChallengeBook(input: { studentId: string; title: string; author?: string; pages: number; finishedOn: string }): Result {
+  const s = getState();
+  const st = studentById(s, input.studentId);
+  const { target, minPages } = s.challenge;
+  if (!st) return fail('Choose the student first.');
+  if (!input.title.trim()) return fail('Enter the book’s title.');
+  if (!(input.pages >= minPages)) return fail(`The book needs about ${minPages} pages or more to count. This one has ${input.pages || 0}.`);
+  if (input.finishedOn > todayISO()) return fail('The finish date can’t be in the future.');
+  if (input.finishedOn < s.academicYear.startsOn) return fail(`The book must be finished in this academic year (from ${s.academicYear.startsOn}).`);
+  const year = s.academicYear.label;
+  const mine = s.challenge.entries.filter((e) => e.studentId === st.id && e.year === year);
+  if (mine.some((e) => norm(e.title) === norm(input.title))) return fail(`${st.name} has already logged “${input.title.trim()}” this year.`);
+  const entry: ChallengeEntry = { id: uid('c'), studentId: st.id, title: input.title.trim(), author: input.author?.trim() || undefined, pages: input.pages, finishedOn: input.finishedOn, year };
+  setState((x) => ({ ...x, challenge: { ...x.challenge, entries: [...x.challenge.entries, entry] }, memory: remember(x.memory, { title: entry.title, author: entry.author }) }));
+  const n = mine.length + 1;
+  return done(n >= target ? `${st.name} has completed the challenge: ${n} of ${target} books.` : `Logged. ${st.name} is at ${n} of ${target}.`);
+}
+export function removeChallengeEntry(id: string) {
+  setState((s) => ({ ...s, challenge: { ...s.challenge, entries: s.challenge.entries.filter((e) => e.id !== id) } }));
+}
+export function setChallenge(patch: { target?: number; minPages?: number }) {
+  setState((s) => ({ ...s, challenge: { ...s.challenge, ...patch } }));
+}
+
+// ---------- classes, sections and the academic year ----------
+export function addSection(grade: number, letter: string): Result {
+  const l = letter.trim().toUpperCase();
+  if (!/^[A-Z]$/.test(l)) return fail('A section is a single letter, such as E.');
+  const s = getState();
+  const cur = s.sections[grade] ?? [];
+  if (cur.includes(l)) return fail(`Class ${grade}${l} already exists.`);
+  setState((x) => ({ ...x, sections: { ...x.sections, [grade]: [...cur, l].sort() } }));
+  return done(`Class ${grade}${l} added.`);
+}
+export function removeSection(grade: number, letter: string): Result {
+  const s = getState();
+  const cur = s.sections[grade] ?? [];
+  if (cur.length <= 1) return fail(`Class ${grade} needs at least one section.`);
+  if (s.students.some((x) => x.active && x.grade === grade && x.section === letter)) return fail(`Class ${grade}${letter} still has students. Move them first.`);
+  setState((x) => ({ ...x, sections: { ...x.sections, [grade]: cur.filter((c) => c !== letter) } }));
+  return done(`Class ${grade}${letter} removed.`);
+}
+/** Moves every class up, applies the new sections, optionally re-deals students, and starts the new academic year. */
+export function startNewYear(plan: YearPlan): Result {
+  const s = getState();
+  if (!plan.label.trim()) return fail('Enter the new academic year, such as 2027-28.');
+  if (plan.endsOn <= plan.startsOn) return fail('The year must end after it starts.');
+  if (plan.label === s.academicYear.label) return fail(`The academic year is already ${plan.label}.`);
+  const r = computeRollover(s.students, plan);
+  const ev: AppEvent = { id: uid('e'), date: todayISO(), type: 'promotion', detail: `New year ${plan.label}: ${r.movedUp} students moved up, ${r.left} left from class 12` };
+  setState((x) => ({
+    ...x,
+    students: r.students,
+    sections: { ...x.sections, ...Object.fromEntries(Object.entries(plan.sections).map(([g, l]) => [g, [...l].sort()])) },
+    academicYear: { label: plan.label.trim(), startsOn: plan.startsOn, endsOn: plan.endsOn },
+    timetable: plan.clearTimetable
+      ? { regular: { jr: { mon: {}, tue: {}, wed: {}, thu: {}, fri: {}, sat: {} }, sr: { mon: {}, tue: {}, wed: {}, thu: {}, fri: {}, sat: {} } }, exceptions: { jr: {}, sr: {} } }
+      : x.timetable,
+    events: [ev, ...x.events],
+  }));
+  return done(`Academic year ${plan.label} started. ${r.movedUp} students moved up and ${r.left} left school.`);
 }
 
 // ---------- settings ----------

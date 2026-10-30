@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
 import { toast } from '../../components/ui/toast';
-import { classIdOf, gradesFor, LIBRARIES, libraryForGrade, norm, SECTIONS } from '../../domain/rules';
+import { allClassIds, LIBRARIES, libraryForGrade, norm } from '../../domain/rules';
 import { libraryOfClassId, searchBooks } from '../../domain/queries';
 import type { LibraryId } from '../../domain/types';
 import { cn } from '../../lib/cn';
@@ -26,6 +26,7 @@ export function GlobalSearch() {
   const teachers = useStore((s) => s.teachers);
   const books = useStore((s) => s.books);
   const active = useStore((s) => s.activeLibrary);
+  const sections = useStore((s) => s.sections);
   const state = useStore((s) => s);
 
   const [chip, setChip] = useState<Scope>('all');
@@ -68,7 +69,7 @@ export function GlobalSearch() {
 
     if (want('class')) {
       const m = /^(\d{1,2})\s*([a-z])?$/i.exec(text.replace(/^class\s*/i, ''));
-      const all = [...gradesFor('jr'), ...gradesFor('sr')].flatMap((g) => SECTIONS.map((sec) => classIdOf(g, sec)));
+      const all = allClassIds(sections);
       const list = m
         ? all.filter((id) => id.startsWith(`${Number(m[1])}${(m[2] ?? '').toUpperCase()}`))
         : !text && scope === 'class' ? all.filter((id) => libraryOfClassId(id) === active) : [];
@@ -99,7 +100,7 @@ export function GlobalSearch() {
         out.push({ key: `a-${a}`, group: 'Authors', title: a, sub: `${n} book${n > 1 ? 's' : ''}`, go: () => { finish(); navigate(`/collections?q=${encodeURIComponent(a)}`); } }));
     }
     return out;
-  }, [text, scope, students, teachers, books, active, state]);
+  }, [text, scope, students, teachers, books, active, state, sections]);
 
   useEffect(() => setCursor(0), [text, scope]);
 
@@ -139,7 +140,7 @@ export function GlobalSearch() {
           <div className="flex flex-wrap gap-1.5 border-b border-line p-2.5" role="group" aria-label="Search in">
             {SCOPES.map((s) => (
               <button key={s.id} type="button" aria-pressed={scope === s.id} onClick={() => { setChip(s.id); if (prefix) setRaw(prefix[2]!); inputRef.current?.focus(); }}
-                className={cn('h-7 rounded-control px-2.5 text-xs font-medium', scope === s.id ? 'bg-sage text-navy' : 'text-muted hover:bg-sage-soft hover:text-ink')}>
+                className={cn('h-7 rounded-control px-2.5 text-xs font-medium', scope === s.id ? 'bg-sage text-on-sage' : 'text-muted hover:bg-sage-soft hover:text-ink')}>
                 {s.label}
               </button>
             ))}

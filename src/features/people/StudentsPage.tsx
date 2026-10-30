@@ -7,7 +7,7 @@ import { Panel } from '../../components/ui/Panel';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
 import { Tabs } from '../../components/ui/Tabs';
-import { gradesFor, LIBRARIES, libraryForGrade, norm, SECTIONS } from '../../domain/rules';
+import { gradesFor, LIBRARIES, libraryForGrade, norm, sectionsOf } from '../../domain/rules';
 import { openLoansOf } from '../../domain/queries';
 import { useStore } from '../../store/store';
 import { BulkAddDialog, StudentDialog, TeacherDialog } from './PersonDialogs';
@@ -39,7 +39,7 @@ export function StudentsPage() {
         <label className="block text-[13px] font-medium">Search<input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder={tab === 'students' ? 'Name or GR no.' : 'Name or department'} className="mt-1.5 block h-10 w-64 rounded-control border border-line bg-panel px-3 text-sm font-normal hover:border-primary/40" /></label>
         {tab === 'students' && (<>
           <Select label="Class" value={grade} onChange={(e) => { setGrade(e.target.value); setPage(0); }} className="w-36"><option value="all">All</option>{[...gradesFor('jr'), ...gradesFor('sr')].map((g) => <option key={g} value={g}>Class {g}</option>)}</Select>
-          <Select label="Section" value={section} onChange={(e) => { setSection(e.target.value); setPage(0); }} className="w-32"><option value="all">All</option>{SECTIONS.map((s) => <option key={s}>{s}</option>)}</Select>
+          <Select label="Section" value={section} onChange={(e) => { setSection(e.target.value); setPage(0); }} className="w-32"><option value="all">All</option>{(grade === 'all' ? [...new Set(Object.values(state.sections).flat())].sort() : sectionsOf(state.sections, Number(grade))).map((s) => <option key={s}>{s}</option>)}</Select>
           <p className="pb-2.5 text-sm text-muted">{students.length} students</p>
         </>)}
       </div>
@@ -50,7 +50,7 @@ export function StudentsPage() {
             <thead><tr className="border-b border-line text-[11px] tracking-[0.08em] text-muted uppercase"><th className="px-4 py-2.5 font-medium">Name</th><th className="px-3 py-2.5 font-medium">GR no.</th><th className="px-3 py-2.5 font-medium">Class</th><th className="px-3 py-2.5 font-medium">Library</th><th className="px-3 py-2.5 font-medium">Books held</th></tr></thead>
             <tbody>{shown.map((s) => (
               <tr key={s.id} className="border-b border-line last:border-b-0 hover:bg-sage-soft/50">
-                <td className="px-4 py-2.5"><Link to={`/student/${s.id}`} className="font-medium text-ink hover:text-primary hover:underline">{s.name}</Link></td>
+                <td className="px-4 py-2.5"><Link to={`/student/${s.id}`} className="font-medium text-ink hover:text-accent hover:underline">{s.name}</Link></td>
                 <td className="px-3 py-2.5 text-muted tabular-nums">{s.grNo}</td><td className="px-3 py-2.5">{s.grade}{s.section}</td>
                 <td className="px-3 py-2.5"><Badge>{LIBRARIES[libraryForGrade(s.grade)].short}</Badge></td>
                 <td className="px-3 py-2.5 tabular-nums">{openLoansOf(state, { type: 'student', id: s.id }).length}</td>
@@ -60,7 +60,7 @@ export function StudentsPage() {
           <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm">
             <thead><tr className="border-b border-line text-[11px] tracking-[0.08em] text-muted uppercase"><th className="px-4 py-2.5 font-medium">Name</th><th className="px-3 py-2.5 font-medium">Department</th><th className="px-3 py-2.5 font-medium">Books held</th></tr></thead>
             <tbody>{teachers.map((t) => (
-              <tr key={t.id} className="border-b border-line last:border-b-0 hover:bg-sage-soft/50"><td className="px-4 py-2.5"><Link to={`/teacher/${t.id}`} className="font-medium text-ink hover:text-primary hover:underline">{t.name}</Link></td><td className="px-3 py-2.5 text-muted">{t.department}</td><td className="px-3 py-2.5 tabular-nums">{openLoansOf(state, { type: 'teacher', id: t.id }).length}</td></tr>))}</tbody>
+              <tr key={t.id} className="border-b border-line last:border-b-0 hover:bg-sage-soft/50"><td className="px-4 py-2.5"><Link to={`/teacher/${t.id}`} className="font-medium text-ink hover:text-accent hover:underline">{t.name}</Link></td><td className="px-3 py-2.5 text-muted">{t.department}</td><td className="px-3 py-2.5 tabular-nums">{openLoansOf(state, { type: 'teacher', id: t.id }).length}</td></tr>))}</tbody>
           </table></div>
         ))}
         {tab === 'students' && pages > 1 && (

@@ -27,14 +27,14 @@ export function AttendancePage() {
       <div className="mb-4"><Select label="Class" value={cls} onChange={(e) => setCls(e.target.value)} className="w-40"><option value="all">All classes</option>{classes.map((c) => <option key={c}>{c}</option>)}</Select></div>
       <Panel>
         {list.length === 0 ? (
-          <div className="px-5 py-14 text-center"><p className="text-sm font-medium">No attendance marked yet.</p><p className="mt-1 text-sm text-muted">Open a class from Entries or the timetable and mark who is in the library.</p><Link to="/entries" className="mt-3 inline-block text-sm font-medium text-primary underline">Go to Entries</Link></div>
+          <div className="px-5 py-14 text-center"><p className="text-sm font-medium">No attendance marked yet.</p><p className="mt-1 text-sm text-muted">Open a class from Entries or the timetable and mark who is in the library.</p><Link to="/entries" className="mt-3 inline-block text-sm font-medium text-accent underline">Go to Entries</Link></div>
         ) : (
           <div className="overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm">
             <thead><tr className="border-b border-line text-[11px] tracking-[0.08em] text-muted uppercase"><th className="px-4 py-2.5 font-medium">Date</th><th className="px-3 py-2.5 font-medium">Class</th><th className="px-3 py-2.5 font-medium">Lecture</th><th className="px-3 py-2.5 font-medium">In library</th><th className="px-3 py-2.5 font-medium">Absent</th><th className="px-3 py-2.5 font-medium">Not marked</th></tr></thead>
             <tbody>{list.map((x) => { const p = periodById(x.slot); const lib = libraryOfClassId(x.classId); return (
               <tr key={x.key} className="border-b border-line last:border-b-0 hover:bg-sage-soft/50">
                 <td className="px-4 py-2.5">{formatDate(x.date, { weekday: 'short', day: 'numeric', month: 'short' })}</td>
-                <td className="px-3 py-2.5"><Link to={`/class/${x.classId}?date=${x.date}&slot=${x.slot}`} className="font-medium hover:text-primary hover:underline">{x.classId}</Link><span className="ml-1.5 text-xs text-muted">{lib && LIBRARIES[lib].short}</span></td>
+                <td className="px-3 py-2.5"><Link to={`/class/${x.classId}?date=${x.date}&slot=${x.slot}`} className="font-medium hover:text-accent hover:underline">{x.classId}</Link><span className="ml-1.5 text-xs text-muted">{lib && LIBRARIES[lib].short}</span></td>
                 <td className="px-3 py-2.5 text-muted">{p ? `${p.label} · ${formatRange(p)}` : 'Library visit'}</td>
                 <td className="px-3 py-2.5 tabular-nums">{x.present}</td><td className="px-3 py-2.5 tabular-nums">{x.absent}</td><td className="px-3 py-2.5 tabular-nums">{Math.max(0, x.total - x.present - x.absent)}</td>
               </tr>); })}</tbody>

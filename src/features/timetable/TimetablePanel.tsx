@@ -10,7 +10,7 @@ import { effectiveSlot } from '../../domain/queries';
 import { DAYS, DAY_LABELS, PERIODS, currentPeriod, formatRange, periodEnded } from '../../domain/schedule';
 import { cn } from '../../lib/cn';
 import { useNow } from '../../lib/useNow';
-import { useStore } from '../../store/store';
+import { getState, useStore } from '../../store/store';
 import { shortClasses, slotTag } from './labels';
 import { TimetableEditor } from './TimetableEditor';
 import { WeekGrid, weekStart } from './WeekGrid';
@@ -23,7 +23,7 @@ export function TimetablePanel() {
   const state = useStore((s) => s);
   const lib = state.activeLibrary;
   const today = todayISO();
-  const [view, setView] = useState<View>('today');
+  const [view, setView] = useState<View>(() => getState().prefs.timetableView);
   const [date, setDate] = useState(() => nextSchoolDay(todayISO()));
   const [mobileDay, setMobileDay] = useState<string | null>(null);
   const [edit, setEdit] = useState<{ date: string; periodId: string } | null>(null);
@@ -43,13 +43,14 @@ export function TimetablePanel() {
 
   const lectureRows = PERIODS.filter((p) => p.kind === 'lecture').map((p) => ({ p, e: effectiveSlot(state, lib, shownDay, p.id) }));
   const scheduled = lectureRows.filter((r) => r.e.classIds.length).length;
-  const firstFree = PERIODS.find((p) => p.kind === 'lecture' && !effectiveSlot(state, lib, date, p.id).classIds.length) ?? PERIODS[0]!;
+  const available = lectureRows.filter((r) => r.e.source === 'none').length;
+  const firstFree = PERIODS.find((p) => p.kind === 'lecture' && effectiveSlot(state, lib, date, p.id).source === 'none') ?? PERIODS.find((p) => p.kind === 'lecture')!;
   const openEditor = (d = date, periodId = firstFree.id) => setEdit({ date: d, periodId });
 
   const heading = view === 'week' ? 'Weekly Timetable' : isToday ? 'Today’s Timetable' : `${DAY_LABELS[dayOf(date) ?? 'mon'].long}’s Timetable`;
   const sub = view === 'week'
     ? `${formatDate(weekDates[0]!, { day: 'numeric', month: 'short' })} – ${formatDate(weekDates[5]!, { day: 'numeric', month: 'short' })} · ${LIBRARIES[lib].label}`
-    : `${formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })} · ${scheduled} scheduled · ${lectureRows.length - scheduled} available · ${LIBRARIES[lib].label}`;
+    : `${formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })} · ${scheduled} scheduled · ${available} available · ${LIBRARIES[lib].label}`;
   const notSchoolToday = view === 'today' && !dayOf(today) && date !== today;
 
   return (
@@ -83,7 +84,7 @@ export function TimetablePanel() {
           <div className="md:hidden">
             <div role="group" aria-label="Choose day" className="flex gap-1 overflow-x-auto border-b border-line px-3 py-2">
               {weekDates.map((d) => (
-                <button key={d} type="button" aria-pressed={d === shownDay} onClick={() => setMobileDay(d)} className={cn('h-9 min-w-14 shrink-0 rounded-control px-3 text-[13px] font-medium', d === shownDay ? 'bg-sage text-navy' : 'text-muted hover:bg-sage-soft')}>
+                <button key={d} type="button" aria-pressed={d === shownDay} onClick={() => setMobileDay(d)} className={cn('h-9 min-w-14 shrink-0 rounded-control px-3 text-[13px] font-medium', d === shownDay ? 'bg-sage text-on-sage' : 'text-muted hover:bg-sage-soft')}>
                   {DAY_LABELS[dayOf(d)!].short}
                 </button>
               ))}
@@ -146,6 +147,8 @@ function DayRows({ rows, date, nowId, isToday, now, onEdit, onOpen }: {
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   {e.source === 'cancelled' ? (
                     <span className="text-muted line-through">{shortClasses(e.regular)}</span>
+                  ) : e.source === 'proxy' ? (
+                    <span className="font-medium text-ink">{shortClasses(e.proxied)}</span>
                   ) : e.classIds.length ? (
                     <span className="font-medium text-ink">{shortClasses(e.classIds)}</span>
                   ) : (
@@ -153,8 +156,8 @@ function DayRows({ rows, date, nowId, isToday, now, onEdit, onOpen }: {
                   )}
                   {e.classIds.length > 1 && <Badge tone="amber">Combined</Badge>}
                   {tag && <Badge tone={tag.tone}>{tag.label}</Badge>}
-                  {e.source === 'proxy' && e.regular.length > 0 && <span className="text-xs text-muted">was {shortClasses(e.regular)}</span>}
-                  {e.exception?.takenBy && <span className="text-xs text-muted">by {e.exception.takenBy}</span>}
+                  {e.source === 'changed' && e.regular.length > 0 && <span className="text-xs text-muted">was {shortClasses(e.regular)}</span>}
+                  {e.source === 'proxy' && <span className="text-xs text-muted">taken by {e.exception?.takenBy ?? 'someone else'}, not in the library</span>}
                   {e.exception?.note && <span className="text-xs text-muted">· {e.exception.note}</span>}
                   {isNow && <Badge tone="green">Now</Badge>}
                 </span>

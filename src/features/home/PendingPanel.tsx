@@ -13,7 +13,7 @@ export function PendingPanel() {
     <section aria-labelledby="pending-heading">
       <div className="mb-2 flex items-baseline justify-between gap-3">
         <h2 id="pending-heading" className="text-base font-semibold text-ink">Pending <span className="font-normal text-muted">({list.length})</span></h2>
-        <Link to="/pending" className="text-[13px] font-medium text-primary underline underline-offset-2">See all</Link>
+        <Link to="/pending" className="text-[13px] font-medium text-accent underline underline-offset-2">See all</Link>
       </div>
       <Panel>
         {list.length === 0 ? (

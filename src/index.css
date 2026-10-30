@@ -22,12 +22,55 @@
   --color-navy-text: #b9c6cf;
   --color-sage-soft: #eef4f0;
   --color-amber-soft: #f7eddb;
+  /* Text roles that change with the theme */
+  --color-accent: #356859;
+  --color-strong: #172a3a;
+  --color-on-sage: #172a3a;
 
   --radius-control: 8px;
   --radius-panel: 12px;
 }
 
+/* Dark theme: chosen in Settings. "System" follows the device. */
+:root[data-alx-theme='dark'] {
+  --color-canvas: #0d1822;
+  --color-panel: #13222e;
+  --color-ink: #e6ece9;
+  --color-muted: #97a6b0;
+  --color-line: #263a49;
+  --color-sage: #24483e;
+  --color-sage-soft: #182e2a;
+  --color-amber-soft: #3a2f1a;
+  --color-amber: #d9a047;
+  --color-accent: #7cc4ac;
+  --color-strong: #e6ece9;
+  --color-on-sage: #e1efe8;
+  --color-navy-hover: #1d3548;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-alx-theme='system'] {
+    --color-canvas: #0d1822;
+    --color-panel: #13222e;
+    --color-ink: #e6ece9;
+    --color-muted: #97a6b0;
+    --color-line: #263a49;
+    --color-sage: #24483e;
+    --color-sage-soft: #182e2a;
+    --color-amber-soft: #3a2f1a;
+    --color-amber: #d9a047;
+    --color-accent: #7cc4ac;
+    --color-strong: #e6ece9;
+    --color-on-sage: #e1efe8;
+    --color-navy-hover: #1d3548;
+    color-scheme: dark;
+  }
+}
+
 @layer base {
+  html[data-alx-text='large'] { font-size: 112.5%; }
+  [data-alx-density='compact'] :is(td, th) { padding-block: 0.3rem !important; }
+  [data-alx-density='compact'] .compact-tight { padding-block: 0.25rem; }
   html {
     background: var(--color-canvas);
   }
@@ -35,7 +78,7 @@
     @apply bg-canvas font-sans text-ink antialiased;
   }
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
   .on-navy :focus-visible {

@@ -24,8 +24,8 @@ export function LibrarySwitcher() {
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex h-10 items-center gap-2 rounded-control border border-line bg-sage-soft px-3 text-[13px] font-medium text-navy hover:border-primary/40">
-        <LibraryBig className="size-4 text-primary" aria-hidden />
+      <button type="button" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="flex h-10 items-center gap-2 rounded-control border border-line bg-sage-soft px-3 text-[13px] font-medium text-strong hover:border-primary/40">
+        <LibraryBig className="size-4 text-accent" aria-hidden />
         <span className="hidden sm:inline">{LIBRARIES[active].label}</span>
         <span className="sm:hidden">{LIBRARIES[active].short}</span>
         <ChevronDown className="size-4 text-muted" aria-hidden />
@@ -40,7 +40,7 @@ export function LibrarySwitcher() {
                 onClick={() => { setOpen(false); if (l !== active) setGate(l); }}
                 className="flex h-9 w-full items-center gap-2.5 rounded-control px-2.5 text-sm text-ink hover:bg-sage-soft"
               >
-                {l === active ? <Check className="size-4 text-primary" aria-hidden /> : <span className="size-4" />}
+                {l === active ? <Check className="size-4 text-accent" aria-hidden /> : <span className="size-4" />}
                 {LIBRARIES[l].label}
                 {l !== active && <span className="ml-auto text-xs text-muted">Password</span>}
               </button>

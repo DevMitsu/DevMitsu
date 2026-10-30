@@ -4,13 +4,15 @@ import { ErrorList, TextField } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import { Select } from '../../components/ui/Select';
 import { notify } from '../../components/ui/toast';
-import { gradesFor, SECTIONS } from '../../domain/rules';
+import { gradesFor, sectionsOf } from '../../domain/rules';
+import { useStore } from '../../store/store';
 import type { Student, Teacher } from '../../domain/types';
 import { addStudent, addTeacher, bulkAddStudents, updateStudent, updateTeacher } from '../../store/actions';
 
 const ALL_GRADES = [...gradesFor('jr'), ...gradesFor('sr')];
 
 export function StudentDialog({ open, onClose, student, defaults }: { open: boolean; onClose: () => void; student?: Student; defaults?: { grade?: number; section?: string } }) {
+  const sectionMap = useStore((s) => s.sections);
   const [name, setName] = useState(student?.name ?? '');
   const [gr, setGr] = useState(student?.grNo ?? '');
   const [grade, setGrade] = useState(student?.grade ?? defaults?.grade ?? 6);
@@ -32,7 +34,7 @@ export function StudentDialog({ open, onClose, student, defaults }: { open: bool
         <TextField label="GR no." value={gr} onChange={setGr} placeholder={student ? undefined : 'Automatic'} />
         <div className="grid grid-cols-2 gap-4">
           <Select label="Class" value={grade} onChange={(e) => setGrade(Number(e.target.value))}>{ALL_GRADES.map((g) => <option key={g} value={g}>Class {g}</option>)}</Select>
-          <Select label="Section" value={section} onChange={(e) => setSection(e.target.value)}>{SECTIONS.map((s) => <option key={s}>{s}</option>)}</Select>
+          <Select label="Section" value={section} onChange={(e) => setSection(e.target.value)}>{sectionsOf(sectionMap, grade).map((s) => <option key={s}>{s}</option>)}</Select>
         </div>
       </form>
     </Modal>
@@ -63,13 +65,14 @@ export function TeacherDialog({ open, onClose, teacher }: { open: boolean; onClo
 
 /** One student per line: name, class, section, GR no. (GR no. optional). Example: Aarav Shah, 9, B */
 export function BulkAddDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const sectionMap = useStore((s) => s.sections);
   const [text, setText] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
 
   const parsed = text.split('\n').map((l) => l.trim()).filter(Boolean).map((line) => {
     const [name, g, sec, gr] = line.split(',').map((x) => x.trim());
     const grade = Number(g);
-    const ok = !!name && ALL_GRADES.includes(grade) && !!sec && SECTIONS.includes(sec.toUpperCase());
+    const ok = !!name && ALL_GRADES.includes(grade) && !!sec && sectionsOf(sectionMap, grade).includes(sec.toUpperCase());
     return { line, name: name ?? '', grade, section: (sec ?? '').toUpperCase(), grNo: gr, ok };
   });
   const good = parsed.filter((p) => p.ok);

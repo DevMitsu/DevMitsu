@@ -30,15 +30,21 @@ export const getState = () => state;
 
 export const getUndo = () => undoSnapshot;
 
-function persist() {
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {
-    /* ignore: the app keeps working in memory */
-  }
+let persistTimer: number | undefined;
+function persist(immediate = false) {
+  const write = () => {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(state));
+    } catch {
+      /* ignore: the app keeps working in memory */
+    }
+  };
+  if (immediate) return write();
+  window.clearTimeout(persistTimer);
+  persistTimer = window.setTimeout(write, 250);
 }
 
-persist();
+persist(true);
 
 export function setState(update: (s: AppState) => AppState) {
   state = update(state);

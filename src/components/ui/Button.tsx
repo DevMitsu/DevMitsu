@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
@@ -10,12 +10,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: Size;
   loading?: boolean;
   icon?: ReactNode;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 const variants: Record<Variant, string> = {
   primary: 'bg-primary text-white hover:bg-primary-hover',
   secondary: 'border border-line bg-panel text-ink hover:bg-sage-soft hover:border-primary/40',
-  ghost: 'text-primary hover:bg-sage-soft',
+  ghost: 'text-accent hover:bg-sage-soft',
 };
 
 const sizes: Record<Size, string> = {
@@ -32,10 +33,12 @@ export function Button({
   children,
   disabled,
   type = 'button',
+  ref,
   ...rest
 }: ButtonProps) {
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}

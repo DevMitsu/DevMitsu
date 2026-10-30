@@ -10,10 +10,10 @@ import { MiscPage } from '../features/misc/MiscPage';
 import { PendingPage } from '../features/pending/PendingPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { ReportsPage } from '../features/reports/ReportsPage';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { StatsPage } from '../features/stats/StatsPage';
 import { StudentsPage } from '../features/people/StudentsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
-import { PlaceholderPage } from '../pages/PlaceholderPage';
 import { AppShell } from './layout/AppShell';
 
 export function App() {
@@ -34,7 +34,7 @@ export function App() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="misc" element={<MiscPage />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="settings" element={<PlaceholderPage title="Settings" description="Account preferences will be added later. Lending rules, teacher dues and note options are in Miscellaneous." />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

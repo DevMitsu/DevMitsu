@@ -13,13 +13,14 @@ interface Props {
   placeholder?: string;
   label: string;
   emptyHint?: string;
+  autoFocus?: boolean;
 }
 
 /**
  * Type an accession number or part of a title. If a number belongs to more than one book,
  * every match is listed so the right title is chosen instead of guessing.
  */
-export function AccessionPicker({ pool, selected, onAdd, blockReason, placeholder, label, emptyHint }: Props) {
+export function AccessionPicker({ pool, selected, onAdd, blockReason, placeholder, label, emptyHint, autoFocus }: Props) {
   const [q, setQ] = useState('');
   const [msg, setMsg] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +65,7 @@ export function AccessionPicker({ pool, selected, onAdd, blockReason, placeholde
         <input
           ref={inputRef}
           id={`picker-${label}`}
+          autoFocus={autoFocus}
           value={q}
           autoComplete="off"
           placeholder={placeholder ?? 'Accession number or title'}

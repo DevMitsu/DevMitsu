@@ -21,7 +21,13 @@ import { cn } from '../../lib/cn';
 type Tab = 'issued' | 'pending' | 'fines' | 'history';
 interface PanelInit { ret: string[]; resolve: string[]; issueText?: string }
 
+/** Keyed by person so that moving to another file never carries open dialogs across. */
 export function BorrowerFile({ type }: { type: BorrowerType }) {
+  const { id = '' } = useParams();
+  return <BorrowerFileInner key={`${type}-${id}`} type={type} />;
+}
+
+function BorrowerFileInner({ type }: { type: BorrowerType }) {
   const { id = '' } = useParams();
   const [sp, setSp] = useSearchParams();
   const state = useStore((s) => s);
@@ -46,9 +52,10 @@ export function BorrowerFile({ type }: { type: BorrowerType }) {
   const history = state.loans.filter((l) => l.borrowerType === type && l.borrowerId === id && l.returnedOn).sort((a, b) => b.returnedOn!.localeCompare(a.returnedOn!));
 
   if (!person) {
-    return <Panel className="px-6 py-14 text-center"><p className="font-semibold">Not found</p><p className="mt-1 text-sm text-muted">This record doesn’t exist.</p><Link to="/students" className="mt-4 inline-block text-sm font-medium text-primary underline">Back to Students</Link></Panel>;
+    return <Panel className="px-6 py-14 text-center"><p className="font-semibold">Not found</p><p className="mt-1 text-sm text-muted">This record doesn’t exist.</p><Link to="/students" className="mt-4 inline-block text-sm font-medium text-accent underline">Back to Students</Link></Panel>;
   }
   const dues = duesFor(state, borrower);
+  const challengeN = student ? state.challenge.entries.filter((e) => e.studentId === student.id && e.year === state.academicYear.label).length : 0;
   const accruing = loans.reduce((n, l) => n + lateDays(l.dueOn, today) * dues.finePerDay, 0);
   const owed = fines.reduce((n, f) => n + fineOwed(f), 0);
   const home = student ? libraryForGrade(student.grade) : null;
@@ -56,7 +63,7 @@ export function BorrowerFile({ type }: { type: BorrowerType }) {
 
   return (
     <div>
-      <Link to={backTo} className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline"><ArrowLeft className="size-4" aria-hidden />{student ? `Class ${student.grade}${student.section}` : 'Teachers'}</Link>
+      <Link to={backTo} className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"><ArrowLeft className="size-4" aria-hidden />{student ? `Class ${student.grade}${student.section}` : 'Teachers'}</Link>
       <Panel className="mb-6">
         <div className="flex flex-wrap items-start justify-between gap-4 p-5">
           <div className="min-w-0">
@@ -73,7 +80,8 @@ export function BorrowerFile({ type }: { type: BorrowerType }) {
               {accruing > 0 && <> · <span className="font-semibold">{rupees(accruing)}</span> fine building up</>}
               {owed > 0 && <> · <span className="font-semibold">{rupees(owed)}</span> owed</>}
             </p>
-            {teacher && <p className="mt-1 text-xs text-muted">Teacher dues: {dues.loanDays} days, {rupees(dues.finePerDay)}/day late, up to {dues.maxBooks} books. <Link to="/misc" className="text-primary underline">Change in Miscellaneous</Link></p>}
+            {student && challengeN > 0 && <p className="mt-1 text-xs text-muted">Reading challenge: <span className="font-medium text-ink">{challengeN} of {state.challenge.target}</span> books this year{challengeN >= state.challenge.target ? ' (completed)' : ''}.</p>}
+            {teacher && <p className="mt-1 text-xs text-muted">Teacher dues: {dues.loanDays} days, {rupees(dues.finePerDay)}/day late, up to {dues.maxBooks} books. <Link to="/misc" className="text-accent underline">Change in Miscellaneous</Link></p>}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button icon={<Pencil className="size-4" aria-hidden />} onClick={() => setEditing(true)}>Edit</Button>

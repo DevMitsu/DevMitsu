@@ -69,9 +69,12 @@ export function searchBooks(s: AppState, q: string, limit = 8): Book[] {
 
 // ---- timetable ----
 export interface EffectiveSlot {
+  /** Classes expected in the library for this lecture. Empty for a proxy or a cancellation. */
   classIds: string[];
   regular: string[];
-  source: 'regular' | 'proxy' | 'added' | 'cancelled' | 'none';
+  /** For a proxy: the classes that were taken by someone else. */
+  proxied: string[];
+  source: 'regular' | 'proxy' | 'added' | 'changed' | 'cancelled' | 'none';
   exception?: SlotException;
 }
 export function effectiveSlot(s: AppState, library: LibraryId, date: string, periodId: string): EffectiveSlot {
@@ -79,10 +82,11 @@ export function effectiveSlot(s: AppState, library: LibraryId, date: string, per
   const regular = (day && s.timetable.regular[library][day]?.[periodId]) || [];
   const exception = s.timetable.exceptions[library][date]?.[periodId];
   if (exception) {
-    if (exception.kind === 'cancel') return { classIds: [], regular, source: 'cancelled', exception };
-    return { classIds: exception.classIds, regular, source: exception.kind === 'add' ? 'added' : 'proxy', exception };
+    if (exception.kind === 'cancel') return { classIds: [], regular, proxied: [], source: 'cancelled', exception };
+    if (exception.kind === 'proxy') return { classIds: [], regular, proxied: exception.classIds.length ? exception.classIds : regular, source: 'proxy', exception };
+    return { classIds: exception.classIds, regular, proxied: [], source: exception.kind === 'add' ? 'added' : 'changed', exception };
   }
-  return { classIds: regular, regular, source: regular.length ? 'regular' : 'none' };
+  return { classIds: regular, regular, proxied: [], source: regular.length ? 'regular' : 'none' };
 }
 
 /** Which lecture (if any) is this class booked in on this date? */

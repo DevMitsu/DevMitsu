@@ -13,8 +13,9 @@ import type { Borrower, LostOutcome } from '../../domain/types';
 import { isCrossLibrary, issueBlock, lateFineFor, processTransaction, undoLast } from '../../store/actions';
 import { getUndo, useStore } from '../../store/store';
 import { cn } from '../../lib/cn';
+import { OneAtATime } from './OneAtATime';
 
-interface Props {
+export interface PanelProps {
   open: boolean;
   onClose: () => void;
   borrower: Borrower;
@@ -26,7 +27,7 @@ interface Props {
 interface FineDec { waive: string; note: NoteValue; settle: 'collected' | 'owed' }
 interface LostDec { on: boolean; outcome: LostOutcome; note: string }
 
-export function IssueReturnPanel({ open, onClose, borrower, preselectReturn = [], issueParkedText, resolvePendingIds = [] }: Props) {
+export function SeveralAtOnce({ open, onClose, borrower, preselectReturn = [], issueParkedText, resolvePendingIds = [], onSwitchMode }: PanelProps & { onSwitchMode: () => void }) {
   const state = useStore((s) => s);
   const today = todayISO();
   const dues = duesFor(state, borrower);
@@ -107,12 +108,16 @@ export function IssueReturnPanel({ open, onClose, borrower, preselectReturn = []
       }
     >
       <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3 rounded-control bg-canvas px-3 py-2 text-[13px] text-muted">
+          <span>Several at once: build a list, then confirm everything together.</span>
+          <button type="button" onClick={onSwitchMode} className="font-medium text-accent underline underline-offset-2">One book at a time</button>
+        </div>
         <ErrorList errors={errors} />
 
         {/* RETURN */}
         <section aria-labelledby="return-heading" className="rounded-panel border border-line">
           <header className="flex items-center gap-2 border-b border-line bg-canvas px-4 py-2.5">
-            <ArrowDownToLine className="size-4 text-primary" aria-hidden />
+            <ArrowDownToLine className="size-4 text-accent" aria-hidden />
             <h3 id="return-heading" className="text-sm font-semibold">Return</h3>
             <span className="ml-auto text-xs text-muted">{loans.length} with {borrower.type === 'student' ? 'student' : 'teacher'}</span>
           </header>
@@ -191,7 +196,7 @@ export function IssueReturnPanel({ open, onClose, borrower, preselectReturn = []
         {/* ISSUE */}
         <section aria-labelledby="issue-heading" className="rounded-panel border border-line">
           <header className="flex items-center gap-2 border-b border-line bg-canvas px-4 py-2.5">
-            <ArrowUpFromLine className="size-4 text-primary" aria-hidden />
+            <ArrowUpFromLine className="size-4 text-accent" aria-hidden />
             <h3 id="issue-heading" className="text-sm font-semibold">Issue</h3>
             <span className="ml-auto text-xs text-muted">Limit {dues.maxBooks} · {dues.loanDays} days · {rupees(dues.finePerDay)}/day late · holding {heldAfter}</span>
           </header>
@@ -234,4 +239,13 @@ export function IssueReturnPanel({ open, onClose, borrower, preselectReturn = []
       </div>
     </Modal>
   );
+}
+
+/** Opens in the mode chosen in Settings. One book at a time is the quick default. */
+export function IssueReturnPanel(props: PanelProps) {
+  const initial = useStore((s) => s.prefs.issueMode);
+  const [mode, setMode] = useState(initial);
+  return mode === 'one'
+    ? <OneAtATime {...props} onSwitchMode={() => setMode('several')} />
+    : <SeveralAtOnce {...props} onSwitchMode={() => setMode('one')} />;
 }

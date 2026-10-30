@@ -6,22 +6,23 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { toast } from '../../components/ui/toast';
-import { addDays, classIdOf, gradesFor, LIBRARIES, SECTIONS, todayISO } from '../../domain/rules';
+import { addDays, allClassIds, LIBRARIES, todayISO } from '../../domain/rules';
 import { cn } from '../../lib/cn';
 import { useStore } from '../../store/store';
 import { buildReport, REPORTS, toCsv, type Opts, type ReportId } from './builders';
 
 const LIMIT = 200;
-const ALL_CLASSES = [...gradesFor('jr'), ...gradesFor('sr')].flatMap((g) => SECTIONS.map((s) => classIdOf(g, s)));
 
 export function ReportsPage() {
   const state = useStore((s) => s);
   const today = todayISO();
   const [id, setId] = useState<ReportId>('circulation');
   const [o, setO] = useState<Opts>({ from: addDays(today, -30), to: today, library: 'both', arrange: 'date', circulation: 'all', classId: '' });
+  const ALL_CLASSES = useMemo(() => allClassIds(state.sections), [state.sections]);
   const meta = REPORTS.find((r) => r.id === id)!;
   const built = useMemo(() => buildReport(state, id, o), [state, id, o]);
   const set = (patch: Partial<Opts>) => setO((x) => ({ ...x, ...patch }));
+  const choose = (r: ReportId) => { setId(r); if (r === 'waived' && o.arrange === 'author') set({ arrange: 'date' }); };
   const invalid = meta.usesRange && o.from > o.to;
 
   const presets: Array<[string, () => void]> = [
@@ -51,7 +52,7 @@ export function ReportsPage() {
         <nav aria-label="Reports" className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <ul className="flex gap-1 overflow-x-auto lg:flex-col">
             {REPORTS.map((r) => (
-              <li key={r.id} className="shrink-0"><button type="button" aria-pressed={r.id === id} onClick={() => setId(r.id)} className={cn('h-10 w-full rounded-control px-3 text-left text-sm font-medium', r.id === id ? 'bg-sage text-navy' : 'text-muted hover:bg-sage-soft hover:text-ink')}>{r.label}</button></li>
+              <li key={r.id} className="shrink-0"><button type="button" aria-pressed={r.id === id} onClick={() => choose(r.id)} className={cn('h-10 w-full rounded-control px-3 text-left text-sm font-medium', r.id === id ? 'bg-sage text-on-sage' : 'text-muted hover:bg-sage-soft hover:text-ink')}>{r.label}</button></li>
             ))}
           </ul>
         </nav>
@@ -67,7 +68,7 @@ export function ReportsPage() {
               <Select label="Library" value={o.library} onChange={(e) => set({ library: e.target.value as Opts['library'] })} className="w-36"><option value="both">Both</option><option value="jr">{LIBRARIES.jr.label}</option><option value="sr">{LIBRARIES.sr.label}</option></Select>
               {id === 'circulation' && <Select label="Show" value={o.circulation} onChange={(e) => set({ circulation: e.target.value as Opts['circulation'] })} className="w-44"><option value="all">All loans</option><option value="out">Still out</option><option value="overdue">Overdue</option><option value="returned">Returned</option></Select>}
               {id === 'students' && <Select label="Class" value={o.classId} onChange={(e) => set({ classId: e.target.value })} className="w-32"><option value="">All</option>{ALL_CLASSES.map((c) => <option key={c}>{c}</option>)}</Select>}
-              {id !== 'students' && <div><p className="mb-1.5 text-[13px] font-medium">Arrange by</p><SegmentedControl label="Arrange by" value={o.arrange} onChange={(v) => set({ arrange: v })} options={[{ value: 'date', label: 'Date' }, { value: 'name', label: id === 'circulation' || id === 'waived' ? 'Name' : 'Title' }]} /></div>}
+              {id !== 'students' && id !== 'authors' && <div><p className="mb-1.5 text-[13px] font-medium">Arrange by</p><SegmentedControl label="Arrange by" value={o.arrange} onChange={(v) => set({ arrange: v })} options={[{ value: 'date', label: 'Date' }, { value: 'name', label: id === 'circulation' || id === 'waived' ? 'Name' : 'Title' }, ...(id === 'waived' ? [] : [{ value: 'author' as const, label: 'Author' }])]} /></div>}
             </div>
             {meta.usesRange && <div className="mt-3 flex flex-wrap gap-1.5">{presets.map(([l, fn]) => <button key={l} type="button" onClick={fn} className="h-7 rounded-control border border-line px-2.5 text-xs font-medium text-muted hover:bg-sage-soft hover:text-ink">{l}</button>)}</div>}
             {invalid && <p role="alert" className="mt-3 text-[13px] text-ink">The start date is after the end date.</p>}

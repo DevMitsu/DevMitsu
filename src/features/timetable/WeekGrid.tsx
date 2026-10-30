@@ -25,7 +25,7 @@ export function WeekGrid({ date, highlight, onEdit }: { date: string; highlight?
           <tr className="border-b border-line">
             <th scope="col" className="w-40 px-4 py-2.5 text-left text-[11px] font-medium tracking-[0.08em] text-muted uppercase">Lecture</th>
             {dates.map((d) => (
-              <th key={d} scope="col" className={cn('border-l border-line px-2 py-2.5 text-center text-[13px] font-medium', d === highlight ? 'bg-sage text-navy' : 'text-ink')}>
+              <th key={d} scope="col" className={cn('border-l border-line px-2 py-2.5 text-center text-[13px] font-medium', d === highlight ? 'bg-sage text-on-sage' : 'text-ink')}>
                 {DAY_LABELS[dayOf(d)!].short}
                 <span className="block text-[11px] font-normal text-muted">{fromISO(d).getDate()}</span>
               </th>
@@ -47,20 +47,21 @@ export function WeekGrid({ date, highlight, onEdit }: { date: string; highlight?
                 </th>
                 {dates.map((d) => {
                   const e = effectiveSlot(state, lib, d, p.id);
-                  const changed = e.source === 'proxy' || e.source === 'added' || e.source === 'cancelled';
+                  const changed = e.source !== 'regular' && e.source !== 'none';
                   return (
                     <td key={d} className={cn('border-l border-line p-0', d === highlight && 'bg-sage-soft/60')}>
                       <button
                         type="button"
                         onClick={() => onEdit(d, p.id)}
-                        aria-label={`${DAY_LABELS[dayOf(d)!].long} ${p.label}: ${e.source === 'cancelled' ? 'cancelled' : e.classIds.length ? shortClasses(e.classIds) : 'available'}`}
+                        aria-label={`${DAY_LABELS[dayOf(d)!].long} ${p.label}: ${e.source === 'cancelled' ? 'cancelled' : e.source === 'proxy' ? `${shortClasses(e.proxied)} taken by ${e.exception?.takenBy ?? 'someone else'} (proxy)` : e.classIds.length ? shortClasses(e.classIds) : 'available'}`}
                         className={cn(
                           'relative flex h-12 w-full items-center justify-center px-1.5 text-[13px] transition-colors',
-                          e.classIds.length ? 'bg-sage font-medium text-navy hover:bg-primary hover:text-white' : 'text-muted hover:bg-sage-soft hover:text-ink',
-                          e.source === 'cancelled' && 'bg-canvas text-muted line-through',
+                          e.classIds.length ? 'bg-sage font-medium text-on-sage hover:bg-primary hover:text-white' : 'text-muted hover:bg-sage-soft hover:text-ink',
+                          (e.source === 'cancelled' || e.source === 'proxy') && 'bg-canvas text-muted hover:bg-sage-soft hover:text-ink',
+                          e.source === 'cancelled' && 'line-through',
                         )}
                       >
-                        {e.source === 'cancelled' ? shortClasses(e.regular) : e.classIds.length ? shortClasses(e.classIds) : 'Free'}
+                        {e.source === 'cancelled' ? shortClasses(e.regular) : e.source === 'proxy' ? `${shortClasses(e.proxied)} · proxy` : e.classIds.length ? shortClasses(e.classIds) : 'Free'}
                         {changed && <span aria-hidden className="absolute top-1 right-1 size-1.5 rounded-full bg-amber" />}
                         {e.classIds.length > 1 && <span aria-hidden className="absolute bottom-0.5 text-[9px] font-semibold tracking-wide uppercase opacity-70">Combined</span>}
                       </button>

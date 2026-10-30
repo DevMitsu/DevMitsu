@@ -6,6 +6,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { App } from './app/App';
+import { applyPrefs } from './lib/applyPrefs';
+import { getState } from './store/store';
+
+applyPrefs(getState().prefs);
 
 // Hosted previews cannot change the address bar, so they keep the current page in memory.
 const Router = import.meta.env.VITE_ROUTER === 'memory' ? MemoryRouter : BrowserRouter;

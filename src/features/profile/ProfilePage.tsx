@@ -61,7 +61,7 @@ export function ProfilePage() {
       </Panel>
 
       <Panel>
-        <div className="border-b border-line bg-canvas px-5 py-3"><h2 className="flex items-center gap-2 text-base font-semibold"><KeyRound className="size-4 text-primary" aria-hidden />Change password</h2><p className="mt-0.5 text-[13px] text-muted">There is one password per library. Changing it needs the old one.</p></div>
+        <div className="border-b border-line bg-canvas px-5 py-3"><h2 className="flex items-center gap-2 text-base font-semibold"><KeyRound className="size-4 text-accent" aria-hidden />Change password</h2><p className="mt-0.5 text-[13px] text-muted">There is one password per library. Changing it needs the old one.</p></div>
         <form className="space-y-4 p-5" onSubmit={(e) => { e.preventDefault(); const r = changePassword(lib, oldPw, newPw, confirmPw); setPwErrors(r.errors); if (notify(r, `Password for the ${LIBRARIES[lib].label} changed.`)) { setOldPw(''); setNewPw(''); setConfirmPw(''); } }}>
           <ErrorList errors={pwErrors} />
           <TextField label="Old password" type="password" value={oldPw} onChange={setOldPw} disabled={!unlocked} autoComplete="off" />

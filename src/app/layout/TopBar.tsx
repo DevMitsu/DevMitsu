@@ -10,7 +10,7 @@ export function TopBar({ navOpen, onMenuClick }: { navOpen: boolean; onMenuClick
       <button type="button" onClick={onMenuClick} aria-label="Open navigation" aria-expanded={navOpen} aria-controls="primary-navigation" className="grid size-10 shrink-0 place-items-center rounded-control text-ink hover:bg-sage-soft lg:hidden">
         <Menu className="size-5" aria-hidden />
       </button>
-      <Link to="/" className="shrink-0 rounded-control font-display text-[26px] leading-none text-navy lg:w-[calc(16rem-1.25rem)]">
+      <Link to="/" className="shrink-0 rounded-control font-display text-[26px] leading-none text-strong lg:w-[calc(16rem-1.25rem)]">
         <span className="hidden sm:inline">Alexandria</span>
         <span className="sm:hidden" aria-label="Alexandria">A</span>
       </Link>

@@ -73,6 +73,8 @@ export interface Fine {
   bookId: string;
   createdOn: string;
   amount: number;
+  /** Days late when the fine was made. */
+  days?: number;
   waived: number;
   collected: number;
   waiveNote?: string;
@@ -96,9 +98,13 @@ export interface Settings {
 }
 
 export interface SlotException {
-  /** 'proxy' replaces the regular class(es) on one date, 'cancel' removes them, 'add' adds a lecture where none is regular. */
-  kind: 'proxy' | 'cancel' | 'add';
+  /**
+   * 'proxy': the class(es) were taken by someone else instead of coming to the library (classIds are those classes).
+   * 'cancel': no lecture. 'change': different class(es) come on this date. 'add': a lecture where none is regular.
+   */
+  kind: 'proxy' | 'cancel' | 'add' | 'change';
   classIds: string[];
+  /** For a proxy: who took the class. */
   takenBy?: string;
   note?: string;
 }
@@ -123,6 +129,40 @@ export interface AppEvent {
   note?: string;
 }
 
+export interface ChallengeEntry {
+  id: string;
+  studentId: string;
+  title: string;
+  author?: string;
+  pages: number;
+  finishedOn: string;
+  /** Academic year label, e.g. "2026-27". */
+  year: string;
+}
+
+export interface Prefs {
+  theme: 'system' | 'light' | 'dark';
+  textSize: 'normal' | 'large';
+  compact: boolean;
+  issueMode: 'one' | 'several';
+  keepOpen: boolean;
+  warnOverdue: boolean;
+  blockOverdue: boolean;
+  timetableView: 'today' | 'week';
+}
+
+export interface AcademicYear {
+  label: string;
+  startsOn: string;
+  endsOn: string;
+}
+
+export interface Memory {
+  types: string[];
+  authors: string[];
+  titles: Array<{ title: string; author?: string; type?: string }>;
+}
+
 export interface AppState {
   version: number;
   activeLibrary: LibraryId;
@@ -139,4 +179,11 @@ export interface AppState {
   timetable: Timetable;
   events: AppEvent[];
   settings: Settings;
+  /** Section letters in use for each class, e.g. 9: ["A","B","C","D"]. */
+  sections: Record<number, string[]>;
+  academicYear: AcademicYear;
+  challenge: { target: number; minPages: number; entries: ChallengeEntry[] };
+  prefs: Prefs;
+  /** Genres, titles and authors typed before, offered as suggestions next time. */
+  memory: Memory;
 }

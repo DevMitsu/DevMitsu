@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ToastHost } from '../../components/ui/toast';
+import { useApplyPrefs } from '../../lib/applyPrefs';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
@@ -8,6 +9,7 @@ export function AppShell() {
   const [navOpen, setNavOpen] = useState(false);
   const closeNav = useCallback(() => setNavOpen(false), []);
   const { pathname } = useLocation();
+  useApplyPrefs();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
 
   return (

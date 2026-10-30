@@ -35,7 +35,7 @@ export function ClassPage() {
   const period = periodById(slot);
 
   if (!parsed || !lib) {
-    return <Panel className="px-6 py-14 text-center"><p className="font-semibold">Class not found</p><Link to="/entries" className="mt-3 inline-block text-sm font-medium text-primary underline">Back to Entries</Link></Panel>;
+    return <Panel className="px-6 py-14 text-center"><p className="font-semibold">Class not found</p><Link to="/entries" className="mt-3 inline-block text-sm font-medium text-accent underline">Back to Entries</Link></Panel>;
   }
   if (lib !== active) {
     return (
@@ -55,7 +55,7 @@ export function ClassPage() {
   return (
     <div>
       <PageHeader
-        back={<Link to="/entries" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline"><ArrowLeft className="size-4" aria-hidden />Entries</Link>}
+        back={<Link to="/entries" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"><ArrowLeft className="size-4" aria-hidden />Entries</Link>}
         title={`Class ${classId}`}
         description={period ? `${period.label} · ${formatRange(period)} · ${formatDay(date)}` : `Library visit · ${formatDay(date)}`}
         actions={<Button icon={<UserPlus className="size-4" aria-hidden />} onClick={() => setAdding(true)}>Add student</Button>}
@@ -96,7 +96,7 @@ export function ClassPage() {
                   return (
                     <tr key={s.id} className={cn('border-b border-line last:border-b-0', m === 'present' && 'bg-sage-soft')}>
                       <td className="hidden px-4 py-2.5 text-muted tabular-nums sm:table-cell">{roll}</td>
-                      <td className="px-3 py-2.5 max-sm:pl-4"><Link to={`/student/${s.id}`} className="font-medium text-ink underline-offset-2 hover:text-primary hover:underline">{s.name}</Link><span className="block text-xs text-muted">{s.grNo}<span className="md:hidden"> · {held} book{held === 1 ? '' : 's'}</span></span><span className="mt-1 flex flex-wrap gap-1 md:hidden">{pend > 0 && <Badge tone="amber">{pend} pending</Badge>}{owed > 0 && <Badge tone="amber">{rupees(owed)} owed</Badge>}</span></td>
+                      <td className="px-3 py-2.5 max-sm:pl-4"><Link to={`/student/${s.id}`} className="font-medium text-ink underline-offset-2 hover:text-accent hover:underline">{s.name}</Link><span className="block text-xs text-muted">{s.grNo}<span className="md:hidden"> · {held} book{held === 1 ? '' : 's'}</span></span><span className="mt-1 flex flex-wrap gap-1 md:hidden">{pend > 0 && <Badge tone="amber">{pend} pending</Badge>}{owed > 0 && <Badge tone="amber">{rupees(owed)} owed</Badge>}</span></td>
                       <td className="px-3 py-2">
                         <div role="group" aria-label={`Presence of ${s.name}`} className="inline-flex rounded-control border border-line bg-panel p-0.5">
                           <button type="button" aria-pressed={m === 'present'} onClick={() => setPresence(key, s.id, m === 'present' ? null : 'present')} className={cn('inline-flex h-8 items-center gap-1 rounded-[6px] px-2.5 text-[13px] font-medium', m === 'present' ? 'bg-primary text-white' : 'text-muted hover:text-ink')}><Check className="size-3.5" aria-hidden /><span className="max-sm:sr-only">Present</span></button>

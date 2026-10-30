@@ -47,7 +47,7 @@ export function PendingPage() {
                 <li key={p.id} className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm"><Link to={borrowerPath(b)} className="font-medium text-ink hover:text-primary hover:underline">{borrowerName(state, b)}</Link><span className="text-muted"> · {borrowerSub(state, b)}</span></p>
+                      <p className="text-sm"><Link to={borrowerPath(b)} className="font-medium text-ink hover:text-accent hover:underline">{borrowerName(state, b)}</Link><span className="text-muted"> · {borrowerSub(state, b)}</span></p>
                       <p className="mt-0.5 text-[13px] text-ink">{p.kind === 'return' ? 'Return not submitted' : 'Issue to update'}<span className="text-muted"> · {p.kind === 'return' ? books.join(', ') : p.text}</span></p>
                       <p className="text-xs text-muted">Since {formatDate(p.createdOn, { day: 'numeric', month: 'short' })}</p>
                     </div>

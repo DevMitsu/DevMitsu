@@ -3,14 +3,15 @@
  * Loan and event dates are generated relative to today so the demo always looks current.
  */
 import { DAYS, LECTURES } from '../domain/schedule';
+
 import {
-  addDays, classIdOf, dayOf, gradesFor, libraryForGrade, nextSchoolDay, SECTIONS, todayISO,
+  addDays, classIdOf, dayOf, DEFAULT_SECTIONS, gradesFor, libraryForGrade, nextSchoolDay, todayISO,
 } from '../domain/rules';
 import type {
-  AppEvent, AppState, Book, DayId, LibraryId, Loan, Pending, Fine, Student, Teacher, Timetable,
+  AppEvent, AppState, Book, ChallengeEntry, DayId, LibraryId, Loan, Pending, Fine, Student, Teacher, Timetable,
 } from '../domain/types';
 
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 5;
 
 function rng(seed: number) {
   let a = seed;
@@ -102,7 +103,7 @@ function buildPeople(): { students: Student[]; teachers: Teacher[] } {
   const students: Student[] = [];
   let i = 0;
   for (let grade = 1; grade <= 12; grade++) {
-    for (const section of SECTIONS) {
+    for (const section of DEFAULT_SECTIONS) {
       for (let k = 0; k < 6; k++, i++) {
         students.push({
           id: `s${i + 1}`, grNo: `GR${String(1001 + i)}`, grade, section,
@@ -124,7 +125,7 @@ function buildPeople(): { students: Student[]; teachers: Teacher[] } {
 function buildTimetable(today: string): Timetable {
   const regular = { jr: {} as Record<DayId, Record<string, string[]>>, sr: {} as Record<DayId, Record<string, string[]>> };
   (['jr', 'sr'] as LibraryId[]).forEach((lib, li) => {
-    const classes = gradesFor(lib).flatMap((g) => SECTIONS.map((s) => classIdOf(g, s)));
+    const classes = gradesFor(lib).flatMap((g) => DEFAULT_SECTIONS.map((s) => classIdOf(g, s)));
     DAYS.forEach((day, di) => {
       regular[lib][day] = {};
       LECTURES.forEach((p, pi) => {
@@ -135,14 +136,16 @@ function buildTimetable(today: string): Timetable {
   const exceptions: Timetable['exceptions'] = { jr: {}, sr: {} };
   const day = nextSchoolDay(today);
   const dow = dayOf(day)!;
-  (['jr', 'sr'] as LibraryId[]).forEach((lib) => {
-    const classes = gradesFor(lib).flatMap((g) => SECTIONS.map((s) => classIdOf(g, s)));
+  const teacherNames = ['Anita Sharma', 'Rajesh Iyer', 'Priya Nair', 'Suresh Desai'];
+  (['jr', 'sr'] as LibraryId[]).forEach((lib, li) => {
+    const classes = gradesFor(lib).flatMap((g) => DEFAULT_SECTIONS.map((s) => classIdOf(g, s)));
     const taken = Object.keys(regular[lib][dow]);
     const free = LECTURES.map((p) => p.id).filter((id) => !taken.includes(id));
     exceptions[lib][day] = {};
-    if (taken[0]) exceptions[lib][day][taken[0]] = { kind: 'proxy', classIds: [classes[7]!], note: 'Class shifted for exam' };
+    // proxy: the class did not come to the library; someone else took it
+    if (taken[0]) exceptions[lib][day][taken[0]] = { kind: 'proxy', classIds: regular[lib][dow][taken[0]]!, takenBy: teacherNames[li], note: 'Exam revision' };
     if (taken[1]) exceptions[lib][day][taken[1]] = { kind: 'cancel', classIds: [], note: 'Sports practice' };
-    if (taken[2]) exceptions[lib][day][taken[2]] = { kind: 'proxy', classIds: [classes[2]!, classes[3]!], note: 'Joint reading session' };
+    if (taken[2]) exceptions[lib][day][taken[2]] = { kind: 'change', classIds: [classes[2]!, classes[3]!], note: 'Joint reading session' };
     if (free[0]) exceptions[lib][day][free[0]] = { kind: 'add', classIds: [classes[11]!] };
   });
   return { regular, exceptions };
@@ -202,7 +205,7 @@ export function buildSeed(): AppState {
       const late = held - 15;
       fines.push({
         id: nid('f'), loanId: loans[loans.length - 1]!.id, borrowerType: 'student', borrowerId: s.id, bookId: b.id,
-        createdOn: addDays(issuedOn, held), amount: late * 2,
+        createdOn: addDays(issuedOn, held), amount: late * 2, days: late,
         waived: k % 4 === 0 ? late * 2 : 0, collected: k % 4 === 0 ? 0 : late * 2,
         waiveNote: k % 4 === 0 ? 'Librarian discretion' : undefined,
       });
@@ -215,7 +218,7 @@ export function buildSeed(): AppState {
     const bk = general.find((b) => b.id !== l.bookId && b.library === 'jr')!;
     copy.bookId = bk.id;
     loans.push(copy);
-    fines.push({ id: nid('f'), loanId: copy.id, borrowerType: 'student', borrowerId: l.borrowerId, bookId: bk.id, createdOn: copy.returnedOn!, amount: (22 - k) * 2, waived: 0, collected: 0 });
+    fines.push({ id: nid('f'), loanId: copy.id, borrowerType: 'student', borrowerId: l.borrowerId, bookId: bk.id, createdOn: copy.returnedOn!, amount: (22 - k) * 2, days: 22 - k, waived: 0, collected: 0 });
   });
 
   // Pending items
@@ -235,6 +238,17 @@ export function buildSeed(): AppState {
   [[20, 'Lost'], [77, 'Discarded']].forEach(([i, note], k) => ev({ date: addDays(today, -(8 + k * 9)), type: 'removed', library: evBook(i as number).library, accession: evBook(i as number).accession, title: evBook(i as number).title, note: note as string }));
   [[30, 'jr', 'sr'], [31, 'jr', 'sr'], [90, 'sr', 'jr']].forEach(([i, from, to], k) => ev({ date: addDays(today, -(25 + k)), type: 'transfer', from: from as LibraryId, to: to as LibraryId, accession: evBook(i as number).accession, title: evBook(i as number).title, note: 'Moved to suit grade level' }));
 
+  const yr = Number(today.slice(0, 4)) - (Number(today.slice(5, 7)) >= 4 ? 0 : 1);
+  const academicYear = { label: `${yr}-${String((yr + 1) % 100).padStart(2, '0')}`, startsOn: `${yr}-04-01`, endsOn: `${yr + 1}-03-31` };
+  const entries: ChallengeEntry[] = [];
+  const readers = students.filter((s) => s.grade >= 4 && s.grade <= 10);
+  [10, 10, 9, 8, 7, 7, 6, 5, 4, 4, 3, 3, 2, 1, 1].forEach((count, k) => {
+    const st = readers[(k * 17 + 5) % readers.length]!;
+    for (let j = 0; j < count; j++) {
+      const t = (st.grade > 5 ? SR_TITLES : JR_TITLES)[(k * 5 + j * 3) % (st.grade > 5 ? SR_TITLES : JR_TITLES).length]!;
+      entries.push({ id: nid('c'), studentId: st.id, title: t[0], author: t[1], pages: 200 + ((k * 31 + j * 47) % 260), finishedOn: addDays(academicYear.startsOn, Math.min(150, 12 + j * 14 + k)), year: academicYear.label });
+    }
+  });
   const presence: AppState['presence'] = {};
   [['9B', 'l3'], ['7A', 'l5'], ['3C', 'l2']].forEach(([cid, slot], k) => {
     const day = addDays(today, -(k + 1));
@@ -251,6 +265,11 @@ export function buildSeed(): AppState {
     presence,
     timetable: buildTimetable(today),
     events,
+    sections: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, [...DEFAULT_SECTIONS]])),
+    academicYear,
+    challenge: { target: 10, minPages: 200, entries },
+    prefs: { theme: 'system', textSize: 'normal', compact: false, issueMode: 'one', keepOpen: true, warnOverdue: true, blockOverdue: false, timetableView: 'today' },
+    memory: { types: [], authors: [], titles: [] },
     settings: {
       studentDues: { loanDays: 15, finePerDay: 2, maxBooks: 3 },
       teacherDefault: { loanDays: 15, finePerDay: 2, maxBooks: 5 },
