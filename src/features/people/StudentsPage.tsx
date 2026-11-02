@@ -10,7 +10,7 @@ import { Tabs } from '../../components/ui/Tabs';
 import { gradesFor, LIBRARIES, libraryForGrade, norm, sectionsOf } from '../../domain/rules';
 import { openLoansOf } from '../../domain/queries';
 import { useStore } from '../../store/store';
-import { BulkAddDialog, StudentDialog, TeacherDialog } from './PersonDialogs';
+import { BulkAddDialog, BulkTeachersDialog, StudentDialog, TeacherDialog } from './PersonDialogs';
 
 type Tab = 'students' | 'teachers';
 const PAGE = 40;
@@ -23,7 +23,7 @@ export function StudentsPage() {
   const [grade, setGrade] = useState('all');
   const [section, setSection] = useState('all');
   const [page, setPage] = useState(0);
-  const [dlg, setDlg] = useState<null | 'student' | 'teacher' | 'bulk'>(null);
+  const [dlg, setDlg] = useState<null | 'student' | 'teacher' | 'bulk' | 'bulkT'>(null);
 
   const students = useMemo(() => state.students.filter((s) => s.active && (grade === 'all' || s.grade === Number(grade)) && (section === 'all' || s.section === section) && (!q || norm(`${s.name} ${s.grNo}`).includes(norm(q)))).sort((a, b) => a.grade - b.grade || a.section.localeCompare(b.section) || a.name.localeCompare(b.name)), [state.students, q, grade, section]);
   const teachers = useMemo(() => state.teachers.filter((t) => t.active && (!q || norm(`${t.name} ${t.department}`).includes(norm(q)))), [state.teachers, q]);
@@ -33,7 +33,7 @@ export function StudentsPage() {
   return (
     <div>
       <PageHeader title="Students" description="Students and teachers who can borrow books."
-        actions={tab === 'students' ? (<><Button icon={<Upload className="size-4" aria-hidden />} onClick={() => setDlg('bulk')}>Add many</Button><Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setDlg('student')}>Add student</Button></>) : <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setDlg('teacher')}>Add teacher</Button>} />
+        actions={tab === 'students' ? (<><Button icon={<Upload className="size-4" aria-hidden />} onClick={() => setDlg('bulk')}>Add many</Button><Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setDlg('student')}>Add student</Button></>) : <><Button icon={<Upload className="size-4" aria-hidden />} onClick={() => setDlg('bulkT')}>Add many</Button><Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setDlg('teacher')}>Add teacher</Button></>} />
       <Tabs<Tab> label="People" value={tab} onChange={(t) => { setSp(t === 'teachers' ? { tab: 'teachers' } : {}); setQ(''); }} tabs={[{ value: 'students', label: 'Students', count: state.students.filter((s) => s.active).length }, { value: 'teachers', label: 'Teachers', count: state.teachers.filter((t) => t.active).length }]} />
       <div className="my-4 flex flex-wrap items-end gap-3">
         <label className="block text-[13px] font-medium">Search<input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder={tab === 'students' ? 'Name or GR no.' : 'Name or department'} className="mt-1.5 block h-10 w-64 rounded-control border border-line bg-panel px-3 text-sm font-normal hover:border-primary/40" /></label>
@@ -73,6 +73,7 @@ export function StudentsPage() {
       {dlg === 'student' && <StudentDialog open onClose={() => setDlg(null)} />}
       {dlg === 'teacher' && <TeacherDialog open onClose={() => setDlg(null)} />}
       {dlg === 'bulk' && <BulkAddDialog open onClose={() => setDlg(null)} />}
+      {dlg === 'bulkT' && <BulkTeachersDialog open onClose={() => setDlg(null)} />}
     </div>
   );
 }

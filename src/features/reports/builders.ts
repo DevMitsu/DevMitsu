@@ -5,7 +5,7 @@ import type { AppState, EventType, LibraryId } from '../../domain/types';
 export type ReportId = 'circulation' | 'authors' | 'transfers' | 'added' | 'imports' | 'exports' | 'removed' | 'students' | 'waived';
 export const REPORTS: Array<{ id: ReportId; label: string; hint: string; usesRange: boolean }> = [
   { id: 'circulation', label: 'Circulation', hint: 'Which books are with whom, when they were taken and when they are due.', usesRange: true },
-  { id: 'authors', label: 'Books by author', hint: 'Every book arranged by author, with its accession number and status.', usesRange: false },
+  { id: 'authors', label: 'Books by author', hint: 'Every book arranged by author, with its ISBN, publisher, year, accession number and status.', usesRange: false },
   { id: 'transfers', label: 'Book transfers', hint: 'Books moved between the Jr. and Sr. libraries.', usesRange: true },
   { id: 'added', label: 'New books added', hint: 'Books added to a library collection.', usesRange: true },
   { id: 'imports', label: 'Imports', hint: 'Books received from outside, such as donations.', usesRange: true },
@@ -55,7 +55,7 @@ export function buildReport(s: AppState, id: ReportId, o: Opts): Built {
 
   if (id === 'authors') {
     const list = s.books.filter((b) => inLib(b.library)).sort((a, b) => byAuthor(a.author ?? '', b.author ?? '') || a.title.localeCompare(b.title) || a.accession - b.accession);
-    return { columns: ['Author', 'Title', 'Accession no.', 'Genre / type', 'Library', 'Status'], rows: list.map((b) => [b.author ?? NO_AUTHOR, b.title, b.accession, b.type, LIBRARIES[b.library].label, b.status]) };
+    return { columns: ['Author', 'Title', 'Subtitle', 'Accession no.', 'ISBN', 'Publisher', 'Year', 'Genre / type', 'Library', 'Status'], rows: list.map((b) => [b.author ?? NO_AUTHOR, b.title, b.subtitle ?? '', b.accession, b.isbn ?? '', b.publisher ?? '', b.year ?? '', b.type, LIBRARIES[b.library].label, b.status]) };
   }
 
   if (id === 'students') {

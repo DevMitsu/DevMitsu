@@ -9,7 +9,7 @@ import { Select } from '../../components/ui/Select';
 import { notify, toast } from '../../components/ui/toast';
 import { duesFor, norm, rupees, sectionsOf } from '../../domain/rules';
 import type { Dues, NoteCategory } from '../../domain/types';
-import { moveStudentSection, resetDemo, setNoteOptions, setStudentDues, setTeacherDefault, setTeacherOverride } from '../../store/actions';
+import { moveStudentSection, resetDemo, startEmpty, setNoteOptions, setStudentDues, setTeacherDefault, setTeacherOverride } from '../../store/actions';
 import { useStore } from '../../store/store';
 import { ReadingChallenge } from '../challenge/ReadingChallenge';
 import { ClassesSections } from './ClassesSections';
@@ -53,6 +53,7 @@ export function MiscPage() {
   const picked = state.students.find((s) => s.id === pick);
 
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [newOpt, setNewOpt] = useState<Record<string, string>>({});
 
   return (
@@ -133,10 +134,17 @@ export function MiscPage() {
         </div>
       </Section>
 
-      <Section id="demo" title="Demo data" description="This prototype keeps its changes in this browser. Reset brings back the original dummy data.">
-        <div className="flex flex-wrap items-center gap-4">
-          <Checkbox checked={confirmReset} onChange={setConfirmReset} label="Replace everything with fresh dummy data" />
-          <Button disabled={!confirmReset} onClick={() => { resetDemo(); setConfirmReset(false); toast('Demo data reset.'); }}>Reset demo data</Button>
+      <Section id="demo" title="Start with your own data" description="This prototype keeps its changes in this browser only. Clear the dummy data to begin with an empty library, then add books, students and teachers.">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <Checkbox checked={confirmEmpty} onChange={setConfirmEmpty} label="Remove all the dummy books, people and records" description="Keeps your passwords, class sections, lending rules, note options and settings." />
+            <Button variant="primary" disabled={!confirmEmpty} onClick={() => { startEmpty(); setConfirmEmpty(false); toast('The dummy data is gone. Add your books from Collections and your students from Students.'); }}>Start empty</Button>
+          </div>
+          <p className="text-xs text-muted">Then: Collections → Add many (paste your book list from Excel), Students → Add many (class lists), and the Teachers tab → Add many. Copy a backup from Settings after you enter data.</p>
+          <div className="flex flex-wrap items-center gap-4 border-t border-line pt-4">
+            <Checkbox checked={confirmReset} onChange={setConfirmReset} label="Replace everything with fresh dummy data" />
+            <Button disabled={!confirmReset} onClick={() => { resetDemo(); setConfirmReset(false); toast('Demo data reset.'); }}>Reset demo data</Button>
+          </div>
         </div>
       </Section>
     </div>

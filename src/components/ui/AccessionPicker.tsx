@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { Badge } from './Badge';
+import { cleanIsbn, looksLikeIsbn } from '../../domain/isbn';
 import { LIBRARIES, norm } from '../../domain/rules';
 import type { Book } from '../../domain/types';
 import { cn } from '../../lib/cn';
@@ -28,13 +29,14 @@ export function AccessionPicker({ pool, selected, onAdd, blockReason, placeholde
 
   const matches = useMemo(() => {
     if (!query) return [];
+    if (looksLikeIsbn(query)) { const t = cleanIsbn(query); return pool.filter((b) => b.isbn === t).slice(0, 8); }
     if (/^\d+$/.test(query)) {
       const exact = pool.filter((b) => String(b.accession) === query);
       const partial = pool.filter((b) => String(b.accession) !== query && String(b.accession).startsWith(query));
       return [...exact, ...partial].slice(0, 8);
     }
     const words = norm(query).split(' ');
-    return pool.filter((b) => words.every((w) => norm(`${b.title} ${b.author ?? ''}`).includes(w))).slice(0, 8);
+    return pool.filter((b) => words.every((w) => norm(`${b.title} ${b.subtitle ?? ''} ${b.author ?? ''}`).includes(w))).slice(0, 8);
   }, [pool, query]);
 
   const exactCount = /^\d+$/.test(query) ? matches.filter((b) => String(b.accession) === query).length : 0;
@@ -68,7 +70,7 @@ export function AccessionPicker({ pool, selected, onAdd, blockReason, placeholde
           autoFocus={autoFocus}
           value={q}
           autoComplete="off"
-          placeholder={placeholder ?? 'Accession number or title'}
+          placeholder={placeholder ?? 'Accession number, ISBN or title'}
           onChange={(e) => { setQ(e.target.value); setMsg(''); }}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter(); } }}
           className="h-10 w-full rounded-control border border-line bg-panel pr-3 pl-9 text-sm text-ink placeholder:text-muted hover:border-primary/40"
@@ -95,7 +97,7 @@ export function AccessionPicker({ pool, selected, onAdd, blockReason, placeholde
                     <span className="w-16 shrink-0 font-medium tabular-nums">#{b.accession}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium text-ink">{b.title}</span>
-                      <span className="block truncate text-xs text-muted">{b.author ?? 'Author not recorded'} · {b.type}</span>
+                      <span className="block truncate text-xs text-muted">{[b.subtitle, b.author ?? 'Author not recorded', b.type].filter(Boolean).join(' · ')}</span>
                     </span>
                     <Badge>{LIBRARIES[b.library].short}</Badge>
                     {b.collection === 'cambridge' && <Badge tone="navy">Cambridge</Badge>}

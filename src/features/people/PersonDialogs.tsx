@@ -7,7 +7,7 @@ import { notify } from '../../components/ui/toast';
 import { gradesFor, sectionsOf } from '../../domain/rules';
 import { useStore } from '../../store/store';
 import type { Student, Teacher } from '../../domain/types';
-import { addStudent, addTeacher, bulkAddStudents, updateStudent, updateTeacher } from '../../store/actions';
+import { addStudent, addTeacher, bulkAddStudents, bulkAddTeachers, updateStudent, updateTeacher } from '../../store/actions';
 
 const ALL_GRADES = [...gradesFor('jr'), ...gradesFor('sr')];
 
@@ -94,6 +94,20 @@ export function BulkAddDialog({ open, onClose }: { open: boolean; onClose: () =>
           <p className="text-[13px] text-muted">{good.length} of {parsed.length} lines are ready.{parsed.length - good.length > 0 && <> Lines to fix: {parsed.filter((p) => !p.ok).map((p) => `“${p.line}”`).join(', ')}</>}</p>
         )}
       </div>
+    </Modal>
+  );
+}
+
+/** One teacher per line: name, department. Example: Anita Sharma, English */
+export function BulkTeachersDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [text, setText] = useState('');
+  const rows = text.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [name, ...rest] = l.split(/[,\t]/); return { name: (name ?? '').trim(), department: rest.join(' ').trim() }; });
+  return (
+    <Modal open={open} onClose={onClose} title="Add many teachers" description="One teacher per line: name, then department (subject)."
+      footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!rows.length} onClick={() => { const r = bulkAddTeachers(rows); if (notify(r)) onClose(); }}>Add {rows.length || ''} teacher{rows.length === 1 ? '' : 's'}</Button></>}>
+      <label className="block text-[13px] font-medium">Teacher list
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} placeholder={'Anita Sharma, English\nRajesh Iyer, Mathematics'} className="mt-1.5 w-full rounded-control border border-line bg-panel px-3 py-2 font-mono text-sm font-normal" />
+      </label>
     </Modal>
   );
 }

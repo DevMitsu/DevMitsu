@@ -1,4 +1,5 @@
 import { buildSeed } from '../data/seed';
+import { cleanIsbn, isValidIsbn } from '../domain/isbn';
 import { addDays, duesFor, fineFor, lateDays, libraryForGrade, norm, todayISO } from '../domain/rules';
 import {
   bookById, borrowerOf, fineOwed, openLoansOf, studentById,
@@ -347,23 +348,78 @@ export const isDF = (type: string) => type.trim().toUpperCase() === 'DF';
 /** An accession number is unique within a series: Daily Five (DF) books may share a number with a regular book. */
 export const accessionClash = (books: Book[], accession: number, type: string) =>
   books.find((b) => b.accession === accession && isDF(b.type) === isDF(type));
+export interface BookDetails { subtitle?: string; publisher?: string; year?: number; isbn?: string }
+const checkDetails = (d: BookDetails): string | null => {
+  if (d.isbn && !isValidIsbn(d.isbn)) return 'That ISBN is not valid. It has 10 or 13 digits, and the last digit is a check digit. Check the number or leave it blank.';
+  if (d.year !== undefined && (!Number.isInteger(d.year) || d.year < 1400 || d.year > new Date().getFullYear() + 1)) return 'Enter a publication year, such as 2019.';
+  return null;
+};
 export function addBook(input: {
   title: string; author?: string; type: string; library: LibraryId; collection: Collection; accession: number; note: string; kind: 'new' | 'import';
-}): Result {
+} & BookDetails): Result {
   const s = getState();
   if (!input.title.trim()) return fail('Enter the book’s title.');
   if (!Number.isInteger(input.accession) || input.accession <= 0) return fail('Enter a valid accession number.');
   const clash = accessionClash(s.books, input.accession, input.type);
   if (clash) return fail(`Accession ${input.accession} is already used by “${clash.title}”. Choose another number.`);
   if (!input.note.trim()) return fail('Choose or type a note for this entry.');
+  const bad = checkDetails(input);
+  if (bad) return fail(bad);
   const book: Book = {
-    id: uid('b'), accession: input.accession, title: input.title.trim(), author: input.author?.trim() || undefined,
+    id: uid('b'), accession: input.accession, title: input.title.trim(), subtitle: input.subtitle?.trim() || undefined, author: input.author?.trim() || undefined,
+    publisher: input.publisher?.trim() || undefined, year: input.year || undefined, isbn: input.isbn ? cleanIsbn(input.isbn) : undefined,
     type: input.type.trim() || 'FICTION', library: input.library, collection: input.collection, status: 'Available',
   };
   const ev: AppEvent = { id: uid('e'), date: todayISO(), type: input.kind === 'import' ? 'import' : 'added', library: book.library, accession: book.accession, title: book.title, note: input.note.trim() };
-  setState((x) => ({ ...x, books: [...x.books, book], events: [ev, ...x.events], memory: remember(x.memory, { title: book.title, author: book.author, type: book.type }) }));
+  setState((x) => ({ ...x, books: [...x.books, book], events: [ev, ...x.events], memory: remember(x.memory, { title: book.title, author: book.author, type: book.type, publisher: book.publisher }) }));
   return done(`Added #${book.accession} ${book.title}.`);
 }
+/** Adds many books at once, for example from a spreadsheet. Rows with problems are skipped and listed. */
+export function importBooks(input: { rows: Array<Partial<BookDetails> & { accession: number; title: string; author?: string; type?: string }>; library: LibraryId; collection: Collection; note: string }): Result {
+  const s = getState();
+  if (!input.note.trim()) return fail('Choose or type where these books came from.');
+  const added: Book[] = [];
+  const errors: string[] = [];
+  const all = [...s.books];
+  input.rows.forEach((r, i) => {
+    const line = `Row ${i + 1}`;
+    if (!r.title?.trim()) return errors.push(`${line}: no title.`);
+    if (!Number.isInteger(r.accession) || r.accession <= 0) return errors.push(`${line} (${r.title.trim()}): the accession number is missing or not a number.`);
+    const type = r.type?.trim() || 'FICTION';
+    const clash = accessionClash(all, r.accession, type);
+    if (clash) return errors.push(`${line}: accession ${r.accession} is already used by “${clash.title}”.`);
+    const bad = checkDetails(r);
+    if (bad) return errors.push(`${line} (${r.title.trim()}): ${bad}`);
+    const book: Book = { id: uid('b'), accession: r.accession, title: r.title.trim(), subtitle: r.subtitle?.trim() || undefined, author: r.author?.trim() || undefined, publisher: r.publisher?.trim() || undefined, year: r.year || undefined, isbn: r.isbn ? cleanIsbn(r.isbn) : undefined, type, library: input.library, collection: input.collection, status: 'Available' };
+    all.push(book); added.push(book);
+  });
+  if (!added.length) return { ok: false, errors: errors.length ? errors.slice(0, 40) : ['There were no books to add.'] };
+  const ev: AppEvent = { id: uid('e'), date: todayISO(), type: 'import', library: input.library, title: `Spreadsheet import: ${added.length} books`, note: input.note.trim() };
+  setState((x) => {
+    let memory = x.memory;
+    added.forEach((b) => { memory = remember(memory, { title: b.title, author: b.author, type: b.type, publisher: b.publisher }); });
+    return { ...x, books: [...x.books, ...added], events: [ev, ...x.events], memory };
+  });
+  return { ok: true, errors: errors.slice(0, 40), message: `${added.length} book${added.length > 1 ? 's' : ''} added${errors.length ? `, ${errors.length} skipped` : ''}.` };
+}
+/** Removes the dummy people, books and records but keeps passwords, settings, classes and preferences. */
+export function startEmpty() {
+  const s = getState();
+  replaceState({
+    ...s, students: [], teachers: [], books: [], loans: [], pending: [], fines: [], presence: {}, events: [],
+    challenge: { ...s.challenge, entries: [] },
+    timetable: { regular: { jr: { mon: {}, tue: {}, wed: {}, thu: {}, fri: {}, sat: {} }, sr: { mon: {}, tue: {}, wed: {}, thu: {}, fri: {}, sat: {} } }, exceptions: { jr: {}, sr: {} } },
+    settings: { ...s.settings, teacherOverrides: {} },
+    memory: { types: [], authors: [], publishers: [], titles: [] },
+  });
+}
+export function bulkAddTeachers(rows: Array<{ name: string; department: string }>): Result {
+  const clean = rows.filter((r) => r.name.trim());
+  if (!clean.length) return fail('There are no names to add.');
+  setState((x) => ({ ...x, teachers: [...x.teachers, ...clean.map((r) => ({ id: uid('t'), name: r.name.trim(), department: r.department.trim() || '—', active: true }))] }));
+  return done(`${clean.length} teacher${clean.length > 1 ? 's' : ''} added.`);
+}
+
 function blockIssued(books: Book[]): string[] {
   return books.filter((b) => b.status === 'Issued').map((b) => `#${b.accession} ${b.title} is currently issued.`);
 }
@@ -406,12 +462,13 @@ export function transferBooks(input: { bookIds: string[]; to: LibraryId; note: s
 }
 
 // ---------- memory: genres, titles and authors typed before ----------
-export function remember(m: Memory, v: { title?: string; author?: string; type?: string }): Memory {
+export function remember(m: Memory, v: { title?: string; author?: string; type?: string; publisher?: string }): Memory {
   const types = v.type?.trim() && !m.types.some((t) => norm(t) === norm(v.type)) ? [...m.types, v.type.trim()] : m.types;
   const authors = v.author?.trim() && !m.authors.some((a) => norm(a) === norm(v.author)) ? [...m.authors, v.author.trim()] : m.authors;
   const has = v.title && m.titles.some((t) => norm(t.title) === norm(v.title));
   const titles = v.title?.trim() && !has ? [...m.titles, { title: v.title.trim(), author: v.author?.trim() || undefined, type: v.type?.trim() || undefined }] : m.titles;
-  return { types, authors, titles };
+  const publishers = v.publisher?.trim() && !m.publishers.some((p) => norm(p) === norm(v.publisher)) ? [...m.publishers, v.publisher.trim()] : m.publishers;
+  return { types, authors, publishers, titles };
 }
 
 // ---------- preferences ----------

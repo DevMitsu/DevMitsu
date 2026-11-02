@@ -2,6 +2,7 @@
  * MOCK DATA for the prototype. Every name, book, loan and date here is invented.
  * Loan and event dates are generated relative to today so the demo always looks current.
  */
+import { dummyIsbn13 } from '../domain/isbn';
 import { DAYS, LECTURES } from '../domain/schedule';
 
 import {
@@ -11,7 +12,7 @@ import type {
   AppEvent, AppState, Book, ChallengeEntry, DayId, LibraryId, Loan, Pending, Fine, Student, Teacher, Timetable,
 } from '../domain/types';
 
-export const STATE_VERSION = 5;
+export const STATE_VERSION = 6;
 
 function rng(seed: number) {
   let a = seed;
@@ -86,6 +87,17 @@ function buildBooks(): Book[] {
       accession: camAcc++, title, author: 'Cambridge University Press', type: 'TEXT - BOOK',
       library: libraryForGrade(grade), collection: 'cambridge', status: 'Available',
     });
+  });
+  // Publisher, year, ISBN and a few subtitles (invented for the demo)
+  const publishers = ['Puffin', 'Penguin', 'Bloomsbury', 'HarperCollins', 'Scholastic', 'Oxford University Press', 'Macmillan'];
+  const subtitles: Record<string, string> = {
+    'Wings of Fire': 'An Autobiography', 'The Diary of a Young Girl': 'The Definitive Edition', 'A Brief History of Time': 'From the Big Bang to Black Holes',
+    'The Alchemist': 'A Fable About Following Your Dream', 'Harry Potter and the Philosopher\'s Stone': 'Book 1', 'Charlie and the Chocolate Factory': 'A Classic',
+  };
+  const meta = new Map<string, { isbn: string; publisher: string; year: number }>();
+  books.filter((b) => b.collection === 'general').forEach((b) => {
+    if (!meta.has(b.title)) { const i = meta.size + 1; meta.set(b.title, { isbn: dummyIsbn13(i), publisher: publishers[i % publishers.length]!, year: 1985 + ((i * 7) % 38) }); }
+    Object.assign(b, meta.get(b.title), { subtitle: subtitles[b.title] });
   });
   // A few accession numbers shared by different books, as in the real list, to show the "which book?" picker.
   const share = (a: string, b: string, df = false) => { const x = books.find((k) => k.title === a)!, y = books.find((k) => k.title === b)!; y.accession = x.accession; if (df) y.type = 'DF'; };
@@ -269,7 +281,7 @@ export function buildSeed(): AppState {
     academicYear,
     challenge: { target: 10, minPages: 200, entries },
     prefs: { theme: 'system', textSize: 'normal', compact: false, issueMode: 'one', keepOpen: true, warnOverdue: true, blockOverdue: false, timetableView: 'today' },
-    memory: { types: [], authors: [], titles: [] },
+    memory: { types: [], authors: [], publishers: [], titles: [] },
     settings: {
       studentDues: { loanDays: 15, finePerDay: 2, maxBooks: 3 },
       teacherDefault: { loanDays: 15, finePerDay: 2, maxBooks: 5 },

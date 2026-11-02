@@ -1,20 +1,21 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowRightLeft, PackageMinus, PackageOpen, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, ListPlus, PackageMinus, PackageOpen, Plus, Search, Trash2 } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Panel } from '../../components/ui/Panel';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
 import { Tabs } from '../../components/ui/Tabs';
+import { cleanIsbn, looksLikeIsbn } from '../../domain/isbn';
 import { LIBRARIES, norm } from '../../domain/rules';
 import type { LibraryId } from '../../domain/types';
 import { cn } from '../../lib/cn';
 import { useStore } from '../../store/store';
-import { AddBookDialog, BookActionDialog } from './CollectionDialogs';
+import { AddBookDialog, AddManyBooksDialog, BookActionDialog } from './CollectionDialogs';
 
 const PAGE = 50;
-type Dlg = null | { t: 'new' } | { t: 'transfer' | 'export' | 'remove' };
+type Dlg = null | { t: 'new' | 'many' } | { t: 'transfer' | 'export' | 'remove' };
 
 export function CollectionsPage() {
   const [sp] = useSearchParams();
@@ -36,7 +37,7 @@ export function CollectionsPage() {
     const words = norm(q).split(' ').filter(Boolean);
     return inLib
       .filter((b) => (status === 'all' || b.status === status) && (type === 'all' || b.type === type) && (coll === 'all' || b.collection === coll)
-        && (!words.length || (/^\d+$/.test(q.trim()) ? String(b.accession).startsWith(q.trim()) : words.every((w) => norm(`${b.title} ${b.author ?? ''}`).includes(w)))))
+        && (!words.length || (looksLikeIsbn(q) ? b.isbn === cleanIsbn(q) : /^\d+$/.test(q.trim()) ? String(b.accession).startsWith(q.trim()) : words.every((w) => norm(`${b.title} ${b.subtitle ?? ''} ${b.author ?? ''} ${b.publisher ?? ''}`).includes(w)))))
       .sort((a, b) => {
         if (sort === 'title') return a.title.localeCompare(b.title) || a.accession - b.accession;
         if (sort === 'type') return a.type.localeCompare(b.type) || a.title.localeCompare(b.title);
@@ -54,6 +55,7 @@ export function CollectionsPage() {
     <div>
       <PageHeader title="Collections" description="Every book, by library. Select rows, then transfer, export or remove them."
         actions={<>
+          <Button icon={<ListPlus className="size-4" aria-hidden />} onClick={() => setDlg({ t: 'many' })}>Add many</Button>
           <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setDlg({ t: 'new' })}>Add book</Button>
         </>} />
       <Tabs<LibraryId> label="Library" value={lib} onChange={(l) => { setLib(l); setPage(0); setSel([]); }} tabs={(['jr', 'sr'] as LibraryId[]).map((l) => ({ value: l, label: LIBRARIES[l].label, count: books.filter((b) => b.library === l).length }))} />
@@ -62,7 +64,7 @@ export function CollectionsPage() {
       <div className="my-4 flex flex-wrap items-end gap-3">
         <label className="block text-[13px] font-medium">Search
           <span className="relative mt-1.5 block"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden />
-            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Title, author or accession no." className="block h-10 w-72 rounded-control border border-line bg-panel pr-3 pl-9 text-sm font-normal hover:border-primary/40" /></span>
+            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder="Title, author, ISBN or accession no." className="block h-10 w-72 rounded-control border border-line bg-panel pr-3 pl-9 text-sm font-normal hover:border-primary/40" /></span>
         </label>
         <Select label="Status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }} className="w-36"><option value="all">All</option>{['Available', 'Issued', 'Lost', 'Damaged', 'Discarded', 'Out of school'].map((s) => <option key={s}>{s}</option>)}</Select>
         <Select label="Type" value={type} onChange={(e) => { setType(e.target.value); setPage(0); }} className="w-44"><option value="all">All</option>{types.map((t) => <option key={t}>{t}</option>)}</Select>
@@ -79,7 +81,9 @@ export function CollectionsPage() {
       </div>
 
       <Panel>
-        {shown.length === 0 ? <p className="px-5 py-14 text-center text-sm text-muted">No book matches these filters.</p> : (
+        {shown.length === 0 ? (books.length === 0
+          ? <div className="px-5 py-14 text-center"><p className="text-sm font-medium">The collection is empty.</p><p className="mt-1 text-sm text-muted">Add a book, or paste a list from Excel with Add many.</p></div>
+          : <p className="px-5 py-14 text-center text-sm text-muted">No book matches these filters.</p>) : (
           <div className="overflow-x-auto"><table className="w-full min-w-[820px] text-left text-sm">
             <thead><tr className="border-b border-line text-[11px] tracking-[0.08em] text-muted uppercase"><th className="w-10 px-4 py-2.5"><span className="sr-only">Select</span></th><th className="px-3 py-2.5 font-medium">Acc. no.</th><th className="px-3 py-2.5 font-medium">Title</th><th className="px-3 py-2.5 font-medium">Author</th><th className="px-3 py-2.5 font-medium">Genre / type</th><th className="px-3 py-2.5 font-medium">Status</th></tr></thead>
             <tbody>{shown.map((b, i) => (
@@ -90,8 +94,8 @@ export function CollectionsPage() {
               <tr className={cn('border-b border-line last:border-b-0', sel.includes(b.id) && 'bg-sage-soft')}>
                 <td className="px-4 py-2"><input type="checkbox" aria-label={`Select ${b.title}`} checked={sel.includes(b.id)} onChange={() => toggle(b.id)} className="size-4 accent-[var(--color-primary)]" /></td>
                 <td className="px-3 py-2 font-medium tabular-nums">{b.accession}{(dupAcc.get(`${b.accession}|${b.type.toUpperCase() === 'DF'}`) ?? 0) > 1 && <span title="This number is shared with another book"> <Badge tone="amber">shared</Badge></span>}</td>
-                <td className="px-3 py-2 font-medium text-ink">{b.title}</td>
-                <td className="px-3 py-2 text-muted">{b.author ?? '—'}</td>
+                <td className="px-3 py-2"><span className="font-medium text-ink">{b.title}</span>{b.subtitle && <span className="block text-xs text-muted">{b.subtitle}</span>}{b.isbn && <span className="block text-[11px] text-muted tabular-nums">ISBN {b.isbn}</span>}</td>
+                <td className="px-3 py-2 text-muted">{b.author ?? '—'}{(b.publisher || b.year) && <span className="block text-xs">{[b.publisher, b.year].filter(Boolean).join(', ')}</span>}</td>
                 <td className="px-3 py-2"><span className="flex flex-wrap gap-1"><span className="text-muted">{b.type}</span>{b.collection === 'cambridge' && <Badge tone="navy">Cambridge</Badge>}{b.type.toUpperCase() === 'DF' && <Badge tone="navy">Daily Five</Badge>}{b.transferredFrom && <Badge>from {LIBRARIES[b.transferredFrom].short}</Badge>}</span></td>
                 <td className="px-3 py-2"><Badge tone={b.status === 'Available' ? 'sage' : b.status === 'Issued' ? 'neutral' : 'amber'}>{b.status}</Badge></td>
               </tr>
@@ -107,6 +111,7 @@ export function CollectionsPage() {
       </Panel>
 
       {dlg && dlg.t === 'new' && <AddBookDialog library={lib} onClose={() => setDlg(null)} />}
+      {dlg && dlg.t === 'many' && <AddManyBooksDialog library={lib} onClose={() => setDlg(null)} />}
       {dlg && (dlg.t === 'transfer' || dlg.t === 'export' || dlg.t === 'remove') && <BookActionDialog kind={dlg.t} library={lib} preselect={sel} onClose={() => { setDlg(null); setSel([]); }} />}
     </div>
   );

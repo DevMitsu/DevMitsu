@@ -11,7 +11,7 @@ npm run typecheck
 npm run build
 ```
 
-Changes made in the app are kept in the browser (localStorage). **Miscellaneous → Reset demo data** restores the original dummy data.
+Changes made in the app are kept in the browser (localStorage) on that computer only. **Miscellaneous → Start with your own data** removes the dummy records; **Settings → Backup** copies everything out. A real server (see the plan) is needed before this holds the only copy of school records.
 Demo passwords: Jr. Library `jr123`, Sr. Library `sr123` (checked in the browser only, so not secure).
 
 ## What works
@@ -21,7 +21,7 @@ Demo passwords: Jr. Library `jr123`, Sr. Library `sr123` (checked in the browser
 - **Entries / class page**: mark who is in the library for a visit, then open a student.
 - **Issue / Return**: opens **one book at a time**. Scan or type a book and the app decides: return if the student has it, issue otherwise. Enter confirms. "Not submitted / will update" parks an item in Pending. "Several at once" gives the two-box version. Fines (₹2 per day after 15 days) with partial waivers, lost books, renew, undo.
 - **Fines**: plain-language page (To collect, Overdue books, Paid and waived). Waive the whole fine, half or an amount, with a required reason.
-- **Collections**: one **Add book** form (the source decides whether it counts as new or an import), transfer, export, remove. Arrange by accession, title, author or genre. Titles, authors and genres typed before are suggested as you type. Daily Five (DF) books may share a number with a regular book.
+- **Collections**: one **Add book** form with ISBN, subtitle, publisher and year (a known ISBN fills in the rest), **Add many** (paste rows from Excel), transfer, export, remove. The source decides whether an addition counts as new or an import. Arrange by accession, title, author or genre. Titles, authors and genres typed before are suggested as you type. Daily Five (DF) books may share a number with a regular book.
 - **Reports**: date-range lists (circulation, books by author, transfers, added, imports, exports, removed, waived fines, student lists), arranged by date, name or author; copy or CSV.
 - **Miscellaneous**: Reading challenge (10 books of 200+ pages a year), new academic year wizard (move classes up, add or re-deal sections), classes and sections, move a student, lending rules, teacher dues, note options.
 - **Settings**: light, dark or device theme, text size, compact tables, issue mode, warnings, backup.

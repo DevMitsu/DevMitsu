@@ -29,7 +29,13 @@ export interface Book {
   id: string;
   accession: number;
   title: string;
+  subtitle?: string;
   author?: string;
+  publisher?: string;
+  /** Year of publication. */
+  year?: number;
+  /** Digits only, without hyphens. */
+  isbn?: string;
   type: string;
   library: LibraryId;
   collection: Collection;
@@ -160,6 +166,7 @@ export interface AcademicYear {
 export interface Memory {
   types: string[];
   authors: string[];
+  publishers: string[];
   titles: Array<{ title: string; author?: string; type?: string }>;
 }
 

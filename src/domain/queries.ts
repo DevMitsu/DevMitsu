@@ -1,3 +1,4 @@
+import { cleanIsbn, looksLikeIsbn } from './isbn';
 import { dayOf, libraryForGrade, norm } from './rules';
 import type {
   AppState, Book, Borrower, Collection, LibraryId, Loan, SlotException, Student, Teacher,
@@ -52,6 +53,7 @@ export const booksByAccession = (s: AppState, n: number) => s.books.filter((b) =
 export function searchBooks(s: AppState, q: string, limit = 8): Book[] {
   const query = q.trim();
   if (!query) return [];
+  if (looksLikeIsbn(query)) { const t = cleanIsbn(query); return s.books.filter((b) => b.isbn === t).slice(0, limit); }
   if (/^\d+$/.test(query)) {
     const n = Number(query);
     const exact = booksByAccession(s, n);
@@ -61,7 +63,7 @@ export function searchBooks(s: AppState, q: string, limit = 8): Book[] {
   const words = norm(query).split(' ');
   return s.books
     .filter((b) => {
-      const hay = norm(`${b.title} ${b.author ?? ''}`);
+      const hay = norm(`${b.title} ${b.subtitle ?? ''} ${b.author ?? ''} ${b.publisher ?? ''}`);
       return words.every((w) => hay.includes(w));
     })
     .slice(0, limit);
