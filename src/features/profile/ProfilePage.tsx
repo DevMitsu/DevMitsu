@@ -38,7 +38,7 @@ export function ProfilePage() {
           <p className="text-sm">Signed in to the <span className="font-semibold">{LIBRARIES[lib].label}</span> as <span className="font-semibold">{auth.session?.username}</span>. <button type="button" onClick={() => void signOutTo()} className="font-medium text-accent underline underline-offset-2">Sign out</button></p>
 
           <form className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end" onSubmit={(e) => { e.preventDefault(); void unlock(); }}>
-            <TextField label="Password" type="password" value={pw} onChange={(v) => { setPw(v); setError(''); }} error={error} disabled={unlocked} autoComplete="off" hint={isConnected ? undefined : `Demo password: ${lib}123`} />
+            <TextField label="Password" type="password" value={pw} onChange={(v) => { setPw(v); setError(''); }} error={error} disabled={unlocked} autoComplete="off" />
             {unlocked ? <Button variant="secondary" icon={<LockOpen className="size-4" aria-hidden />} onClick={() => { setUnlocked(false); setPwErrors([]); }}>Lock</Button> : <Button type="submit" variant="primary" icon={<Lock className="size-4" aria-hidden />}>Unlock</Button>}
           </form>
 

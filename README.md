@@ -12,7 +12,7 @@ npm run build
 ```
 
 Changes made in the app are kept in the browser (localStorage) on that computer only. **Miscellaneous → Start with your own data** removes the dummy records; **Settings → Backup** copies everything out. A real server (see the plan) is needed before this holds the only copy of school records.
-Demo passwords: Jr. Library `jr123`, Sr. Library `sr123` (checked in the browser only, so not secure).
+The demo (no database connected) has built-in logins for trying the app. They are not shown on screen, and the demo is not secure: connect the shared database before using real records.
 
 ## Front door and sign-in
 

@@ -7,7 +7,8 @@
     "build": "tsc && vite build",
     "typecheck": "tsc",
     "preview": "vite preview",
-    "build:single": "vite build --assetsInlineLimit 100000000 && node scripts/inline.mjs"
+    "build:single": "vite build --assetsInlineLimit 100000000 && node scripts/inline.mjs",
+    "deploy": "vite build && npx firebase-tools deploy --only hosting"
   },
   "repository": {
     "type": "git",

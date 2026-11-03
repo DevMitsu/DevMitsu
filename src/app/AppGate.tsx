@@ -12,7 +12,7 @@ import { session as store } from '../lib/session';
 import { switchLibrary } from '../store/actions';
 import { getState, useStore } from '../store/store';
 import { initAuth, signIn, signOut, useAuth } from '../sync/auth';
-import { config, DEFAULT_USERNAMES, isConnected, libraryList } from '../sync/config';
+import { config, isConnected, libraryList } from '../sync/config';
 import { startSync, stopSync } from '../sync/controller';
 import { useSyncState } from '../sync/status';
 
@@ -75,12 +75,11 @@ function LoginDialog({ initialLibrary, onClose }: { initialLibrary: LibraryId; o
           </div>
 
           <div className="space-y-3">
-            <TextField label="Username" value={username} onChange={(v) => { setUsername(v); setError(''); }} placeholder={DEFAULT_USERNAMES[lib]} autoComplete="username" autoCapitalize="none" autoFocus />
+            <TextField label="Username" value={username} onChange={(v) => { setUsername(v); setError(''); }} autoComplete="username" autoCapitalize="none" autoFocus />
             <TextField label="Password" type="password" value={pw} onChange={(v) => { setPw(v); setError(''); }} autoComplete="current-password" error={error} />
           </div>
           <Button type="submit" variant="primary" className="mt-4 w-full" loading={busy} icon={<Lock className="size-4" aria-hidden />}>Sign in</Button>
 
-          {!isConnected && <p className="mt-3 rounded-control bg-canvas px-3 py-2 text-center text-xs text-muted">Demo: username <span className="font-medium text-ink">{DEFAULT_USERNAMES[lib]}</span>, password <span className="font-medium text-ink">{lib}123</span></p>}
           {config?.mode === 'memory' && <p className="mt-3 text-center text-xs text-muted">Test mode: data is shared between tabs of this browser only.</p>}
           <button type="button" onClick={() => setSetup(true)} className="mx-auto mt-3 block text-xs text-muted underline underline-offset-2">Connection settings</button>
         </form>
