@@ -30,7 +30,7 @@ const KEY = 'alexandria-config';
 
 function normalise(raw: Partial<SyncConfig> | null | undefined): SyncConfig | null {
   if (!raw || (raw.mode !== 'supabase' && raw.mode !== 'memory')) return null;
-  if (raw.mode === 'supabase' && (!raw.url || !raw.anonKey)) return null;
+  if (raw.mode === 'supabase' && (!raw.url || !raw.anonKey || /PASTE-YOUR/i.test(raw.url + raw.anonKey))) return null;
   return {
     mode: raw.mode,
     url: raw.url?.trim().replace(/\/+$/, ''),

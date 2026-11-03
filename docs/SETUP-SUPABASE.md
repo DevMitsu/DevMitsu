@@ -43,6 +43,13 @@ You need: a free Supabase account, the file `alexandria.html`, and the school lo
 ## 8. More devices
 Open the same `alexandria.html` (or the website, if you host it) on each device, enter the URL and key once, and sign in. Phones and tablets cannot open a file from a pendrive, so for those host the file online (for example Netlify Drop or GitHub Pages) and open that address.
 
+## 9. Put it online (so every device can open it)
+Use the folder from `alexandria-site.zip` (unzip it). Open `config.js` in Notepad, paste your Project URL and anon key between the quotes, and save. Then upload the whole folder to a free host:
+- **Netlify Drop (easiest):** go to app.netlify.com/drop, sign in, and drag the folder onto the page. You get an address like `something.netlify.app`; you can rename it.
+- **Firebase Hosting (gives `yourname.web.app`):** needs a Google account and the Firebase command line tool; ask your IT manager or me for the exact commands.
+- **Cloudflare Pages** or **GitHub Pages** work too.
+Because the address is public, anyone can see the logo page, but nobody can see any data without a library login. Keep `config.js` with the anon key only; never put the `service_role` key anywhere.
+
 ## Good to know
 - Each visit starts at the logo. Closing the browser signs you out, and the app signs out after 30 minutes without activity (change it in Settings).
 - A free Supabase project may pause after a week without use. Check the current plan limits. For daily automatic backups choose a paid plan, and in any case use **Settings, Copy backup** each week.
