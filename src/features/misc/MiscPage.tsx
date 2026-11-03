@@ -11,6 +11,7 @@ import { duesFor, norm, rupees, sectionsOf } from '../../domain/rules';
 import type { Dues, NoteCategory } from '../../domain/types';
 import { moveStudentSection, resetDemo, startEmpty, setNoteOptions, setStudentDues, setTeacherDefault, setTeacherOverride } from '../../store/actions';
 import { useStore } from '../../store/store';
+import { isConnected } from '../../sync/config';
 import { ReadingChallenge } from '../challenge/ReadingChallenge';
 import { ClassesSections } from './ClassesSections';
 import { YearRollover } from './YearRollover';
@@ -134,6 +135,11 @@ export function MiscPage() {
         </div>
       </Section>
 
+      {isConnected ? (
+        <Section id="demo" title="Shared database" description="This device is connected to the shared database, so the demo reset tools are turned off to protect the real records.">
+          <p className="text-sm text-muted">Back up from Settings. To add many books, students or teachers, use the Add many buttons in Collections and Students.</p>
+        </Section>
+      ) : (
       <Section id="demo" title="Start with your own data" description="This prototype keeps its changes in this browser only. Clear the dummy data to begin with an empty library, then add books, students and teachers.">
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-4">
@@ -147,6 +153,7 @@ export function MiscPage() {
           </div>
         </div>
       </Section>
+      )}
     </div>
   );
 }

@@ -5,11 +5,10 @@ import { Badge } from '../../components/ui/Badge';
 import { toast } from '../../components/ui/toast';
 import { allClassIds, LIBRARIES, libraryForGrade, norm } from '../../domain/rules';
 import { libraryOfClassId, searchBooks } from '../../domain/queries';
-import type { LibraryId } from '../../domain/types';
 import { cn } from '../../lib/cn';
-import { switchLibrary } from '../../store/actions';
 import { useStore } from '../../store/store';
-import { LibraryGate } from './LibraryGate';
+import { enabledLibraries } from '../../sync/config';
+import { signOutTo } from '../AppGate';
 
 type Scope = 'all' | 'class' | 'student' | 'teacher' | 'book' | 'author';
 const SCOPES: Array<{ id: Scope; label: string }> = [
@@ -33,7 +32,6 @@ export function GlobalSearch() {
   const [raw, setRaw] = useState('');
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(0);
-  const [gate, setGate] = useState<{ lib: LibraryId; to: string } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
@@ -58,7 +56,8 @@ export function GlobalSearch() {
     const lib = libraryOfClassId(classId)!;
     const to = `/class/${classId}`;
     finish();
-    if (lib !== active) setGate({ lib, to });
+    if (!enabledLibraries.includes(lib)) toast(`The ${LIBRARIES[lib].label} isn’t set up yet.`);
+    else if (lib !== active) toast(`Class ${classId} is in the ${LIBRARIES[lib].label}.`, { action: { label: 'Switch library', run: () => void signOutTo(lib) }, ms: 9000 });
     else navigate(to);
   };
 
@@ -76,7 +75,7 @@ export function GlobalSearch() {
       list.slice(0, 8).forEach((id) => {
         const lib = libraryOfClassId(id)!;
         const count = students.filter((s) => s.active && `${s.grade}${s.section}` === id).length;
-        out.push({ key: `c-${id}`, group: 'Classes', title: `Class ${id}`, sub: `${count} students · ${LIBRARIES[lib].label}`, tag: lib !== active ? `Switch to ${LIBRARIES[lib].short}` : undefined, go: () => goClass(id) });
+        out.push({ key: `c-${id}`, group: 'Classes', title: `Class ${id}`, sub: `${count} students · ${LIBRARIES[lib].label}`, tag: lib !== active ? `${LIBRARIES[lib].short} library` : undefined, go: () => goClass(id) });
       });
     }
     if (want('student') && q) {
@@ -171,9 +170,6 @@ export function GlobalSearch() {
         </div>
       )}
 
-      {gate && (
-        <LibraryGate library={gate.lib} open onClose={() => setGate(null)} onUnlocked={() => { switchLibrary(gate.lib); toast(`Now working in the ${LIBRARIES[gate.lib].label}.`); const to = gate.to; setGate(null); navigate(to); }} />
-      )}
     </div>
   );
 }

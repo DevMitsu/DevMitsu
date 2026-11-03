@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Settings, UserRound } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, UserRound } from 'lucide-react';
 import { LIBRARIES } from '../../domain/rules';
 import { useStore } from '../../store/store';
+import { signOutTo } from '../AppGate';
 
 const items = [
   { label: 'Profile', to: '/profile', icon: UserRound },
@@ -47,6 +48,7 @@ export function ProfileMenu() {
               </Link>
             </li>
           ))}
+          <li><button type="button" onClick={() => { setOpen(false); void signOutTo(); }} className="flex h-9 w-full items-center gap-2.5 rounded-control px-2.5 text-sm text-ink hover:bg-sage-soft"><LogOut className="size-4 text-muted" aria-hidden />Sign out</button></li>
         </ul>
       )}
     </div>

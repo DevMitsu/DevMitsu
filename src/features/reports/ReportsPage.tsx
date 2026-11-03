@@ -8,6 +8,7 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { toast } from '../../components/ui/toast';
 import { addDays, allClassIds, LIBRARIES, todayISO } from '../../domain/rules';
 import { cn } from '../../lib/cn';
+import { libraryList } from '../../sync/config';
 import { useStore } from '../../store/store';
 import { buildReport, REPORTS, toCsv, type Opts, type ReportId } from './builders';
 
@@ -17,7 +18,7 @@ export function ReportsPage() {
   const state = useStore((s) => s);
   const today = todayISO();
   const [id, setId] = useState<ReportId>('circulation');
-  const [o, setO] = useState<Opts>({ from: addDays(today, -30), to: today, library: 'both', arrange: 'date', circulation: 'all', classId: '' });
+  const [o, setO] = useState<Opts>({ from: addDays(today, -30), to: today, library: libraryList.length > 1 ? 'both' : libraryList[0]!, arrange: 'date', circulation: 'all', classId: '' });
   const ALL_CLASSES = useMemo(() => allClassIds(state.sections), [state.sections]);
   const meta = REPORTS.find((r) => r.id === id)!;
   const built = useMemo(() => buildReport(state, id, o), [state, id, o]);
@@ -65,7 +66,7 @@ export function ReportsPage() {
                 <label className="block text-[13px] font-medium">From<input type="date" value={o.from} max={o.to} onChange={(e) => e.target.value && set({ from: e.target.value })} className="mt-1.5 block h-10 rounded-control border border-line bg-panel px-3 text-sm font-normal" /></label>
                 <label className="block text-[13px] font-medium">To<input type="date" value={o.to} min={o.from} onChange={(e) => e.target.value && set({ to: e.target.value })} className="mt-1.5 block h-10 rounded-control border border-line bg-panel px-3 text-sm font-normal" /></label>
               </>)}
-              <Select label="Library" value={o.library} onChange={(e) => set({ library: e.target.value as Opts['library'] })} className="w-36"><option value="both">Both</option><option value="jr">{LIBRARIES.jr.label}</option><option value="sr">{LIBRARIES.sr.label}</option></Select>
+              <Select label="Library" value={o.library} onChange={(e) => set({ library: e.target.value as Opts['library'] })} className="w-36">{libraryList.length > 1 && <option value="both">Both</option>}{libraryList.map((l) => <option key={l} value={l}>{LIBRARIES[l].label}</option>)}</Select>
               {id === 'circulation' && <Select label="Show" value={o.circulation} onChange={(e) => set({ circulation: e.target.value as Opts['circulation'] })} className="w-44"><option value="all">All loans</option><option value="out">Still out</option><option value="overdue">Overdue</option><option value="returned">Returned</option></Select>}
               {id === 'students' && <Select label="Class" value={o.classId} onChange={(e) => set({ classId: e.target.value })} className="w-32"><option value="">All</option>{ALL_CLASSES.map((c) => <option key={c}>{c}</option>)}</Select>}
               {id !== 'students' && id !== 'authors' && <div><p className="mb-1.5 text-[13px] font-medium">Arrange by</p><SegmentedControl label="Arrange by" value={o.arrange} onChange={(v) => set({ arrange: v })} options={[{ value: 'date', label: 'Date' }, { value: 'name', label: id === 'circulation' || id === 'waived' ? 'Name' : 'Title' }, ...(id === 'waived' ? [] : [{ value: 'author' as const, label: 'Author' }])]} /></div>}

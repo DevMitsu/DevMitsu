@@ -11,8 +11,9 @@ import { notify } from '../../components/ui/toast';
 import { Badge } from '../../components/ui/Badge';
 import { bookById, nextAccession } from '../../domain/queries';
 import { LIBRARIES, norm, otherLibrary } from '../../domain/rules';
-import type { Book, Collection, LibraryId } from '../../domain/types';
+import type { Book, BookStatus, Collection, LibraryId } from '../../domain/types';
 import { cleanIsbn, isValidIsbn } from '../../domain/isbn';
+import { libraryList } from '../../sync/config';
 import { accessionClash, addBook, exportBooks, importBooks, removeBooks, transferBooks } from '../../store/actions';
 import { useStore } from '../../store/store';
 
@@ -104,7 +105,7 @@ export function AddBookDialog({ library, onClose }: { library: LibraryId; onClos
           <TextField label="Year published" type="number" inputMode="numeric" value={year} onChange={setYear} placeholder="e.g. 2019" error={yearBad ? 'Enter a year such as 2019' : undefined} />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Select label="Library" value={lib} onChange={(e) => { setLib(e.target.value as LibraryId); setAccEdited(false); }}>{(['jr', 'sr'] as LibraryId[]).map((l) => <option key={l} value={l}>{LIBRARIES[l].label}</option>)}</Select>
+          <Select label="Library" value={lib} onChange={(e) => { setLib(e.target.value as LibraryId); setAccEdited(false); }}>{libraryList.map((l) => <option key={l} value={l}>{LIBRARIES[l].label}</option>)}</Select>
           <Select label="Collection" value={collection} onChange={(e) => { setCollection(e.target.value as Collection); setAccEdited(false); }}><option value="general">General</option><option value="cambridge">Cambridge (teachers only)</option></Select>
           <TextField label="Accession no." type="number" inputMode="numeric" value={acc} onChange={(v) => { setAcc(v); setAccEdited(true); }} error={clash ? `Already used by “${clash.title}”` : undefined} />
         </div>
@@ -114,7 +115,8 @@ export function AddBookDialog({ library, onClose }: { library: LibraryId; onClos
   );
 }
 
-const FIELDS = ['Accession no.', 'Title', 'Subtitle', 'Author', 'Genre', 'Publisher', 'Year', 'ISBN'] as const;
+const FIELDS = ['Accession no.', 'Title', 'Subtitle', 'Author', 'Genre', 'Publisher', 'Year', 'ISBN', 'Status'] as const;
+const STATUS_WORDS: Record<string, BookStatus> = { available: 'Available', issued: 'Issued', lost: 'Lost', damage: 'Damaged', damaged: 'Damaged', discard: 'Discarded', discarded: 'Discarded', donated: 'Out of school', 'out of school': 'Out of school' };
 /** Paste rows copied from Excel. Columns, in order: accession no., title, subtitle, author, genre, publisher, year, ISBN. */
 export function AddManyBooksDialog({ library, onClose }: { library: LibraryId; onClose: () => void }) {
   const state = useStore((s) => s);
@@ -130,7 +132,7 @@ export function AddManyBooksDialog({ library, onClose }: { library: LibraryId; o
     const body = lines.length && !/^\s*\d/.test(split(lines[0]!)[0] ?? '') ? lines.slice(1) : lines;   // a header row starts with words, not a number
     return body.map((l) => {
       const c = split(l).map((x) => x.trim().replace(/^"|"$/g, ''));
-      return { accession: Number(c[0]), title: c[1] ?? '', subtitle: c[2], author: c[3], type: c[4], publisher: c[5], year: c[6] ? Number(c[6]) : undefined, isbn: c[7] };
+      return { accession: Number(c[0]), title: c[1] ?? '', subtitle: c[2], author: c[3], type: c[4], publisher: c[5], year: c[6] ? Number(c[6]) : undefined, isbn: c[7], status: STATUS_WORDS[(c[8] ?? '').toLowerCase()] };
     });
   }, [text]);
 
@@ -147,14 +149,14 @@ export function AddManyBooksDialog({ library, onClose }: { library: LibraryId; o
         <div className="rounded-control border border-line bg-canvas p-3 text-[13px]">
           <p className="font-medium text-ink">Columns, in this order</p>
           <p className="mt-1 text-muted">{FIELDS.join('  ·  ')}</p>
-          <p className="mt-1 text-xs text-muted">Only accession number and title are needed. Leave a cell empty if you don’t have it. Columns from Excel are separated by tabs automatically.</p>
+          <p className="mt-1 text-xs text-muted">Only accession number and title are needed. Leave a cell empty if you don’t have it. Status can be Available, Issued, Lost, Damaged, Discarded or Donated (empty means Available). Columns from Excel are separated by tabs automatically.</p>
         </div>
         {result.length > 0 && <ErrorList errors={[`${result.length} row${result.length > 1 ? 's were' : ' was'} skipped:`, ...result.slice(0, 8), ...(result.length > 8 ? [`…and ${result.length - 8} more.`] : [])]} />}
         <label className="block text-[13px] font-medium">Rows from Excel
           <textarea value={text} onChange={(e) => { setText(e.target.value); setResult([]); }} rows={8} placeholder={'30001\tThe Hobbit\t\tJ. R. R. Tolkien\tFICTION\tHarperCollins\t1998\t9780261102217'} className="mt-1.5 w-full rounded-control border border-line bg-panel px-3 py-2 font-mono text-xs font-normal" />
         </label>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Select label="Library" value={lib} onChange={(e) => setLib(e.target.value as LibraryId)}>{(['jr', 'sr'] as LibraryId[]).map((l) => <option key={l} value={l}>{LIBRARIES[l].label}</option>)}</Select>
+          <Select label="Library" value={lib} onChange={(e) => setLib(e.target.value as LibraryId)}>{libraryList.map((l) => <option key={l} value={l}>{LIBRARIES[l].label}</option>)}</Select>
           <Select label="Collection" value={collection} onChange={(e) => setCollection(e.target.value as Collection)}><option value="general">General</option><option value="cambridge">Cambridge (teachers only)</option></Select>
           <div className="sm:col-span-1"><p className="mb-1.5 text-[13px] font-medium">Rows found</p><p className="flex h-10 items-center rounded-control border border-line bg-canvas px-3 text-sm tabular-nums">{rows.length}{state.books.length ? '' : ' (the library is empty)'}</p></div>
         </div>
@@ -198,7 +200,7 @@ export function BookActionDialog({ kind, library, preselect, onClose }: { kind: 
         <ErrorList errors={errors} />
         {kind === 'transfer' && (
           <div className="grid items-end gap-4 sm:grid-cols-[1fr_auto_1fr]">
-            <Select label="From" value={from} onChange={(e) => { setFrom(e.target.value as LibraryId); setIds([]); }}>{(['jr', 'sr'] as LibraryId[]).map((l) => <option key={l} value={l}>{LIBRARIES[l].label}</option>)}</Select>
+            <Select label="From" value={from} onChange={(e) => { setFrom(e.target.value as LibraryId); setIds([]); }}>{libraryList.map((l) => <option key={l} value={l}>{LIBRARIES[l].label}</option>)}</Select>
             <span className="pb-2.5 text-muted" aria-hidden>→</span>
             <div><p className="mb-1.5 text-[13px] font-medium">To</p><p className="flex h-10 items-center rounded-control border border-line bg-canvas px-3 text-sm">{LIBRARIES[to].label}</p></div>
           </div>

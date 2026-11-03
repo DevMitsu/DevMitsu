@@ -14,6 +14,18 @@ npm run build
 Changes made in the app are kept in the browser (localStorage) on that computer only. **Miscellaneous → Start with your own data** removes the dummy records; **Settings → Backup** copies everything out. A real server (see the plan) is needed before this holds the only copy of school records.
 Demo passwords: Jr. Library `jr123`, Sr. Library `sr123` (checked in the browser only, so not secure).
 
+## Front door and sign-in
+
+The first page is the school logo on a blue gradient. Click the logo to open the sign-in box: choose the library (Sr. or Jr.), then enter that library's username and password. Each library has its own. Closing the browser signs you out, and the app signs out after 30 minutes without activity (Settings). Switching library means signing in to the other one.
+
+Put the school logo at `public/school-logo.png` (a PNG with a transparent background works best).
+
+## Shared database (live sync)
+
+The app can keep all its data in Supabase so every device sees the same data live. See `docs/SETUP-SUPABASE.md` and `supabase/schema.sql`. Without it the app runs as a demo that keeps data in one browser.
+
+`npm run build:single` writes `dist/alexandria.html`: the whole app as one file that opens by double-click or from a pendrive.
+
 ## What works
 
 - **Search** (top bar): scope chips or typed prefix (`class 9B`, `student Aarav`, `book 1234`, `author Dahl`); Enter opens the first result. A class of the other library asks for that library's password.

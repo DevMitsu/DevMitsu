@@ -10,6 +10,8 @@ import type { Prefs } from '../../domain/types';
 import { cn } from '../../lib/cn';
 import { backupJson, setPrefs } from '../../store/actions';
 import { useStore } from '../../store/store';
+import { ConnectionCard } from './ConnectionCard';
+import { isConnected } from '../../sync/config';
 
 function Group({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
@@ -58,6 +60,10 @@ export function SettingsPage() {
     <div className="max-w-3xl">
       <PageHeader title="Settings" description="How the app looks and how it behaves on this device. Lending rules, teacher dues and note options are in Miscellaneous." />
 
+      <Group title="Shared database" description={isConnected ? 'Every device signed in here sees the same data, live.' : 'Connect this device to Supabase so books, students and loans are shared live between computers.'}>
+        <ConnectionCard />
+      </Group>
+
       <Group title="Appearance">
         <Choice label="Theme" value={prefs.theme} onChange={(v) => set('theme', v)} options={[
           { value: 'light', label: 'Light', icon: <Sun className="size-4" aria-hidden /> },
@@ -78,16 +84,20 @@ export function SettingsPage() {
         <Checkbox checked={prefs.blockOverdue} onChange={(v) => set('blockOverdue', v)} disabled={!prefs.warnOverdue} label="Don’t allow a new issue while a book is overdue" description="A student must return or settle first." />
       </Group>
 
+      <Group title="Security">
+        <Choice label="Sign out after no activity for" value={String(prefs.idleMinutes)} onChange={(v) => set('idleMinutes', Number(v))} options={[{ value: '15', label: '15 minutes' }, { value: '30', label: '30 minutes' }, { value: '60', label: '1 hour' }, { value: '0', label: 'Never', hint: 'Not advised on a shared computer' }]} />
+      </Group>
+
       <Group title="Home">
         <Choice label="Timetable opens in" value={prefs.timetableView} onChange={(v) => set('timetableView', v)} options={[{ value: 'today', label: 'Today' }, { value: 'week', label: 'Week' }]} />
       </Group>
 
-      <Group title="Your data" description="Everything in this prototype lives in this browser. A backup is a copy you can keep.">
+      <Group title="Your data" description={isConnected ? 'Your data lives in the shared database. A backup is an extra copy you can keep on a pendrive.' : 'Everything in this demo lives in this browser. A backup is a copy you can keep.'}>
         <div className="flex flex-wrap gap-2">
           <Button icon={<Copy className="size-4" aria-hidden />} onClick={copy}>Copy backup</Button>
           <Button icon={<Download className="size-4" aria-hidden />} onClick={download} loading={busy}>Download backup</Button>
         </div>
-        <p className="text-xs text-muted">The backup leaves out passwords. To start again with fresh dummy data, use <Link to="/misc" className="text-accent underline">Miscellaneous → Demo data</Link>.</p>
+        <p className="text-xs text-muted">The backup leaves out passwords. {!isConnected && <>To start again with fresh dummy data, use <Link to="/misc" className="text-accent underline">Miscellaneous → Demo data</Link>.</>}</p>
       </Group>
     </div>
   );

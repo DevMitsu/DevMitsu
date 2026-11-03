@@ -13,6 +13,7 @@ import type { LibraryId } from '../../domain/types';
 import { cn } from '../../lib/cn';
 import { useStore } from '../../store/store';
 import { AddBookDialog, AddManyBooksDialog, BookActionDialog } from './CollectionDialogs';
+import { libraryList } from '../../sync/config';
 
 const PAGE = 50;
 type Dlg = null | { t: 'new' | 'many' } | { t: 'transfer' | 'export' | 'remove' };
@@ -58,7 +59,7 @@ export function CollectionsPage() {
           <Button icon={<ListPlus className="size-4" aria-hidden />} onClick={() => setDlg({ t: 'many' })}>Add many</Button>
           <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setDlg({ t: 'new' })}>Add book</Button>
         </>} />
-      <Tabs<LibraryId> label="Library" value={lib} onChange={(l) => { setLib(l); setPage(0); setSel([]); }} tabs={(['jr', 'sr'] as LibraryId[]).map((l) => ({ value: l, label: LIBRARIES[l].label, count: books.filter((b) => b.library === l).length }))} />
+      <Tabs<LibraryId> label="Library" value={lib} onChange={(l) => { setLib(l); setPage(0); setSel([]); }} tabs={libraryList.map((l) => ({ value: l, label: LIBRARIES[l].label, count: books.filter((b) => b.library === l).length }))} />
       <p className="mt-3 text-sm text-muted">{counts.total} books · {counts.available} available · {counts.issued} issued · {counts.total - counts.available - counts.issued} other</p>
 
       <div className="my-4 flex flex-wrap items-end gap-3">
@@ -74,7 +75,7 @@ export function CollectionsPage() {
 
       <div className="mb-3 flex flex-wrap items-center gap-2" aria-live="polite">
         <span className="text-sm text-muted">{sel.length ? `${sel.length} selected` : `${rows.length} books`}</span>
-        <Button size="sm" icon={<ArrowRightLeft className="size-3.5" aria-hidden />} onClick={() => setDlg({ t: 'transfer' })}>Transfer{sel.length ? ' selected' : ''}</Button>
+        {libraryList.length > 1 && <Button size="sm" icon={<ArrowRightLeft className="size-3.5" aria-hidden />} onClick={() => setDlg({ t: 'transfer' })}>Transfer{sel.length ? ' selected' : ''}</Button>}
         <Button size="sm" icon={<PackageOpen className="size-3.5" aria-hidden />} onClick={() => setDlg({ t: 'export' })}>Export{sel.length ? ' selected' : ''}</Button>
         <Button size="sm" icon={<PackageMinus className="size-3.5" aria-hidden />} onClick={() => setDlg({ t: 'remove' })}>Remove{sel.length ? ' selected' : ''}</Button>
         {sel.length > 0 && <Button size="sm" variant="ghost" icon={<Trash2 className="size-3.5" aria-hidden />} onClick={() => setSel([])}>Clear selection</Button>}

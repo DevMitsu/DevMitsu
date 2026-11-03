@@ -5,12 +5,11 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Panel } from '../../components/ui/Panel';
 import { PageHeader } from '../../components/ui/PageHeader';
-import { toast } from '../../components/ui/toast';
-import { LibraryGate } from '../../app/layout/LibraryGate';
+import { signOutTo } from '../../app/AppGate';
 import { fineOwed, libraryOfClassId, openLoansOf, pendingOf, presenceKey, slotForClass, studentsOfClass } from '../../domain/queries';
 import { formatDay, LIBRARIES, norm, parseClassId, rupees, todayISO } from '../../domain/rules';
 import { LECTURES, formatRange, periodById } from '../../domain/schedule';
-import { clearPresence, markAllPresent, setPresence, switchLibrary } from '../../store/actions';
+import { clearPresence, markAllPresent, setPresence } from '../../store/actions';
 import { useStore } from '../../store/store';
 import { cn } from '../../lib/cn';
 import { StudentDialog } from '../people/PersonDialogs';
@@ -22,7 +21,6 @@ export function ClassPage() {
   const state = useStore((s) => s);
   const active = state.activeLibrary;
   const [q, setQ] = useState('');
-  const [gate, setGate] = useState(false);
   const [adding, setAdding] = useState(false);
 
   const parsed = parseClassId(classId);
@@ -41,9 +39,8 @@ export function ClassPage() {
     return (
       <Panel className="mx-auto max-w-lg px-6 py-12 text-center">
         <p className="text-base font-semibold text-ink">Class {classId} belongs to the {LIBRARIES[lib].label}</p>
-        <p className="mt-2 text-sm text-muted">You are working in the {LIBRARIES[active].label}. Switch library to open this class.</p>
-        <Button variant="primary" className="mt-5" onClick={() => setGate(true)}>Switch to {LIBRARIES[lib].label}</Button>
-        <LibraryGate library={lib} open={gate} onClose={() => setGate(false)} onUnlocked={() => { switchLibrary(lib); setGate(false); toast(`Now working in the ${LIBRARIES[lib].label}.`); }} />
+        <p className="mt-2 text-sm text-muted">You are signed in to the {LIBRARIES[active].label}. Sign in to the {LIBRARIES[lib].label} to open this class.</p>
+        <Button variant="primary" className="mt-5" onClick={() => void signOutTo(lib)}>Switch to {LIBRARIES[lib].label}</Button>
       </Panel>
     );
   }

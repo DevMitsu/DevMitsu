@@ -280,7 +280,7 @@ export function buildSeed(): AppState {
     sections: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, [...DEFAULT_SECTIONS]])),
     academicYear,
     challenge: { target: 10, minPages: 200, entries },
-    prefs: { theme: 'system', textSize: 'normal', compact: false, issueMode: 'one', keepOpen: true, warnOverdue: true, blockOverdue: false, timetableView: 'today' },
+    prefs: { theme: 'system', textSize: 'normal', compact: false, issueMode: 'one', keepOpen: true, warnOverdue: true, blockOverdue: false, timetableView: 'today', idleMinutes: 30 },
     memory: { types: [], authors: [], publishers: [], titles: [] },
     settings: {
       studentDues: { loanDays: 15, finePerDay: 2, maxBooks: 3 },
@@ -296,5 +296,19 @@ export function buildSeed(): AppState {
         removal: ['Lost', 'Damaged beyond repair', 'Discarded'],
       },
     },
+  };
+}
+
+/** The starting point for the shared database: no dummy data, sensible defaults. */
+export function buildEmpty(): AppState {
+  const s = buildSeed();
+  return {
+    ...s,
+    students: [], teachers: [], books: [], loans: [], pending: [], fines: [], presence: {}, events: [],
+    challenge: { ...s.challenge, entries: [] },
+    timetable: { regular: { jr: { mon: {}, tue: {}, wed: {}, thu: {}, fri: {}, sat: {} }, sr: { mon: {}, tue: {}, wed: {}, thu: {}, fri: {}, sat: {} } }, exceptions: { jr: {}, sr: {} } },
+    settings: { ...s.settings, teacherOverrides: {} },
+    memory: { types: [], authors: [], publishers: [], titles: [] },
+    passwords: { jr: '', sr: '' },
   };
 }

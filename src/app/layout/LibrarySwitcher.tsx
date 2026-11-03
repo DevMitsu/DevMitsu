@@ -2,15 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, LibraryBig } from 'lucide-react';
 import { LIBRARIES } from '../../domain/rules';
 import type { LibraryId } from '../../domain/types';
-import { switchLibrary } from '../../store/actions';
 import { useStore } from '../../store/store';
-import { toast } from '../../components/ui/toast';
-import { LibraryGate } from './LibraryGate';
+import { signOutTo } from '../AppGate';
 
+/** Shows the library you are signed in to. Switching means signing in to the other library. */
 export function LibrarySwitcher() {
   const active = useStore((s) => s.activeLibrary);
   const [open, setOpen] = useState(false);
-  const [gate, setGate] = useState<LibraryId | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,25 +29,18 @@ export function LibrarySwitcher() {
         <ChevronDown className="size-4 text-muted" aria-hidden />
       </button>
       {open && (
-        <ul className="absolute right-0 z-20 mt-2 w-56 rounded-panel border border-line bg-panel p-1.5">
+        <ul className="absolute right-0 z-20 mt-2 w-60 rounded-panel border border-line bg-panel p-1.5">
           <li className="px-2.5 py-1.5 text-[11px] font-medium tracking-[0.08em] text-muted uppercase">Working in</li>
           {(['jr', 'sr'] as LibraryId[]).map((l) => (
             <li key={l}>
-              <button
-                type="button"
-                onClick={() => { setOpen(false); if (l !== active) setGate(l); }}
-                className="flex h-9 w-full items-center gap-2.5 rounded-control px-2.5 text-sm text-ink hover:bg-sage-soft"
-              >
+              <button type="button" onClick={() => { setOpen(false); if (l !== active) void signOutTo(l); }} className="flex h-9 w-full items-center gap-2.5 rounded-control px-2.5 text-sm text-ink hover:bg-sage-soft">
                 {l === active ? <Check className="size-4 text-accent" aria-hidden /> : <span className="size-4" />}
                 {LIBRARIES[l].label}
-                {l !== active && <span className="ml-auto text-xs text-muted">Password</span>}
+                {l !== active && <span className="ml-auto text-xs text-muted">Sign in</span>}
               </button>
             </li>
           ))}
         </ul>
-      )}
-      {gate && (
-        <LibraryGate library={gate} open onClose={() => setGate(null)} onUnlocked={() => { switchLibrary(gate); toast(`Now working in the ${LIBRARIES[gate].label}.`); setGate(null); }} />
       )}
     </div>
   );

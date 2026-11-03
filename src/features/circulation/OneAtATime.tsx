@@ -7,12 +7,12 @@ import { AccessionPicker } from '../../components/ui/AccessionPicker';
 import { ErrorList, TextField } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import { NoteField, emptyNote, noteText, type NoteValue } from '../../components/ui/NoteField';
-import { toast } from '../../components/ui/toast';
+import { notify, toast } from '../../components/ui/toast';
 import { bookById, borrowerName, borrowerPath, borrowerSub, fineOwed, openLoansOf, borrowerOf } from '../../domain/queries';
 import { addDays, diffDays, duesFor, formatDate, LIBRARIES, lateDays, rupees, todayISO } from '../../domain/rules';
 import type { Book, LostOutcome } from '../../domain/types';
 import { cn } from '../../lib/cn';
-import { isCrossLibrary, issueBlock, lateFineFor, processTransaction, undoLast } from '../../store/actions';
+import { isCrossLibrary, issueBlock, lateFineFor, markReturnedUnknown, processTransaction, undoLast } from '../../store/actions';
 import { getUndo, useStore } from '../../store/store';
 import type { PanelProps } from './IssueReturnPanel';
 
@@ -204,6 +204,12 @@ export function OneAtATime({ open, onClose, borrower, preselectReturn = [], issu
             {block ? (
               <div className="mt-3 rounded-control border border-amber/50 bg-amber-soft p-3 text-sm">
                 <p className="flex items-start gap-2 font-medium"><TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber" aria-hidden />{block}.</p>
+                {!holderRef && issBook.status === 'Issued' && (
+                  <div className="mt-2 text-[13px]">
+                    <p className="text-muted">The old records mark this book as issued, but nobody is recorded as having it. If it is back on the shelf, mark it returned.</p>
+                    <Button className="mt-2" onClick={() => { if (notify(markReturnedUnknown(issBook.id))) { setDone((d) => [{ id: Date.now() + d.length, text: `Marked “${issBook.title}” as returned (borrower unknown)`, tone: 'ok' }, ...d]); cancel(); } }}>Mark it returned</Button>
+                  </div>
+                )}
                 {holderRef && <p className="mt-1 text-[13px] text-muted">It is with {borrowerName(state, holderRef)} ({borrowerSub(state, holderRef)}), since {formatDate(holder!.issuedOn, { day: 'numeric', month: 'short' })}. <Link to={`${borrowerPath(holderRef)}?panel=1&ret=${holder!.id}`} className="font-medium text-accent underline">Return it from {borrowerName(state, holderRef).split(' ')[0]}</Link></p>}
               </div>
             ) : (
@@ -214,8 +220,8 @@ export function OneAtATime({ open, onClose, borrower, preselectReturn = [], issu
             {!block && isCross && <div className="mt-3"><p className="mb-2 text-[13px]"><Badge tone="amber">Cross-library</Badge> <span className="ml-1 text-muted">This book is from the {LIBRARIES[issBook.library].label}.</span></p><NoteField category="crossLibrary" required label="Cross-library note" value={cross} onChange={setCross} /></div>}
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button variant="primary" ref={confirmRef} autoFocus onClick={confirmIssue} disabled={issueBlocked}>Confirm issue</Button>
-              <Button onClick={() => parkIssue(`Took “${issBook.title}”`)}>Will update later</Button>
+              {!block && <Button variant="primary" ref={confirmRef} autoFocus onClick={confirmIssue} disabled={issueBlocked}>Confirm issue</Button>}
+              {!block && <Button onClick={() => parkIssue(`Took “${issBook.title}”`)}>Will update later</Button>}
               <Button variant="ghost" onClick={cancel}>Cancel</Button>
             </div>
           </section>

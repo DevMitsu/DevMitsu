@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
-import { buildSeed, STATE_VERSION } from '../data/seed';
+import { buildEmpty, buildSeed, STATE_VERSION } from '../data/seed';
+import { isConnected } from '../sync/config';
 import type { AppState } from '../domain/types';
 
 const KEY = 'alexandria-demo';
@@ -17,13 +18,25 @@ function load(): AppState {
   return buildSeed();
 }
 
-let state: AppState = load();
+const DEVICE_KEY = 'alexandria-device';
+/** When connected to the shared database, only this device's own settings are kept locally. */
+function loadDevice(): AppState {
+  const base = { ...buildEmpty(), activeLibrary: 'sr' as const };
+  try {
+    const raw = window.localStorage.getItem(DEVICE_KEY);
+    if (raw) { const d = JSON.parse(raw); return { ...base, prefs: { ...base.prefs, ...d.prefs }, activeLibrary: d.activeLibrary ?? 'sr' }; }
+  } catch { /* use defaults */ }
+  return base;
+}
+
+let state: AppState = isConnected ? loadDevice() : load();
 let undoSnapshot: UndoSnapshot | null = null;
 const listeners = new Set<() => void>();
 
 export interface UndoSnapshot {
   label: string;
-  slices: Pick<AppState, 'books' | 'loans' | 'pending' | 'fines' | 'events'>;
+  /** Reverses only what that transaction changed, so other devices' newer changes are kept. */
+  revert: (s: AppState) => AppState;
 }
 
 export const getState = () => state;
@@ -34,7 +47,7 @@ let persistTimer: number | undefined;
 function persist(immediate = false) {
   const write = () => {
     try {
-      window.localStorage.setItem(KEY, JSON.stringify(state));
+      window.localStorage.setItem(isConnected ? DEVICE_KEY : KEY, JSON.stringify(isConnected ? { prefs: state.prefs, activeLibrary: state.activeLibrary } : state));
     } catch {
       /* ignore: the app keeps working in memory */
     }
@@ -72,3 +85,11 @@ export function useStore<T>(selector: (s: AppState) => T): T {
   return useSyncExternalStore(subscribe, () => selector(state));
 }
 export const useUndo = () => useSyncExternalStore(subscribe, () => undoSnapshot);
+
+/** What the sync engine uses to read and replace the app's data. */
+export const storeApi = {
+  get: () => state,
+  set(next: AppState) { undoSnapshot = null; state = next; persist(); listeners.forEach((l) => l()); },
+  update: (fn: (s: AppState) => AppState) => setState(fn),
+  subscribe(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn); }; },
+};

@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:single": "vite build --assetsInlineLimit 100000000 && node scripts/inline.mjs"
   },
   "repository": {
     "type": "git",
@@ -19,6 +20,7 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource/dm-serif-display": "^5.3.0",
+    "@supabase/supabase-js": "^2.118.0",
     "lucide-react": "^1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

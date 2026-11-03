@@ -228,8 +228,6 @@ export function processTransaction(input: TxnInput): Result {
   }
   if (errors.length) return { ok: false, errors: [...new Set(errors)] };
 
-  setUndo({ label: 'Last transaction', slices: { books: s0.books, loans: s0.loans, pending: s0.pending, fines: s0.fines, events: s0.events } });
-
   let booksNext = s0.books;
   let loansNext = s0.loans;
   const pendingNext: Pending[] = [...s0.pending];
@@ -302,12 +300,38 @@ export function processTransaction(input: TxnInput): Result {
     }
   }
 
+  setUndo({ label: 'Last transaction', revert: makeRevert({ books: s0.books, loans: s0.loans, pending: s0.pending, fines: s0.fines, events: s0.events }, { books: booksNext, loans: loansNext, pending: pendingNext, fines: finesNext, events: eventsNext }) });
   setState((s) => ({ ...s, books: booksNext, loans: loansNext, pending: pendingNext, fines: finesNext, events: eventsNext }));
   return done(parts.join('. ') + '.');
 }
 
-export function undoLast(snapshot: { slices: Pick<AppState, 'books' | 'loans' | 'pending' | 'fines' | 'events'> }) {
-  setState((s) => ({ ...s, ...snapshot.slices }));
+type Slices = Pick<AppState, 'books' | 'loans' | 'pending' | 'fines' | 'events'>;
+/** Builds a function that undoes exactly what changed between two states: added rows go, changed rows go back, removed rows return. */
+function makeRevert(before: Slices, after: Slices): (s: AppState) => AppState {
+  const keys = ['books', 'loans', 'pending', 'fines', 'events'] as const;
+  const plan = keys.map((k) => {
+    const b = new Map((before[k] as Array<{ id: string }>).map((x) => [x.id, x]));
+    const a = new Map((after[k] as Array<{ id: string }>).map((x) => [x.id, x]));
+    return {
+      k,
+      added: new Set([...a.keys()].filter((id) => !b.has(id))),
+      restore: new Map([...b.entries()].filter(([id, v]) => a.get(id) !== v)),   // changed or removed: the original row
+    };
+  });
+  return (s) => {
+    let n = s;
+    for (const { k, added, restore } of plan) {
+      const arr = (n[k] as Array<{ id: string }>).filter((x) => !added.has(x.id)).map((x) => restore.get(x.id) ?? x);
+      const have = new Set(arr.map((x) => x.id));
+      for (const [id, v] of restore) if (!have.has(id)) arr.push(v);
+      n = { ...n, [k]: arr };
+    }
+    return n;
+  };
+}
+
+export function undoLast(snapshot: { revert: (s: AppState) => AppState }) {
+  setState((s) => snapshot.revert(s));
   setUndo(null);
 }
 
@@ -375,7 +399,7 @@ export function addBook(input: {
   return done(`Added #${book.accession} ${book.title}.`);
 }
 /** Adds many books at once, for example from a spreadsheet. Rows with problems are skipped and listed. */
-export function importBooks(input: { rows: Array<Partial<BookDetails> & { accession: number; title: string; author?: string; type?: string }>; library: LibraryId; collection: Collection; note: string }): Result {
+export function importBooks(input: { rows: Array<Partial<BookDetails> & { accession: number; title: string; author?: string; type?: string; status?: BookStatus }>; library: LibraryId; collection: Collection; note: string }): Result {
   const s = getState();
   if (!input.note.trim()) return fail('Choose or type where these books came from.');
   const added: Book[] = [];
@@ -390,7 +414,7 @@ export function importBooks(input: { rows: Array<Partial<BookDetails> & { access
     if (clash) return errors.push(`${line}: accession ${r.accession} is already used by “${clash.title}”.`);
     const bad = checkDetails(r);
     if (bad) return errors.push(`${line} (${r.title.trim()}): ${bad}`);
-    const book: Book = { id: uid('b'), accession: r.accession, title: r.title.trim(), subtitle: r.subtitle?.trim() || undefined, author: r.author?.trim() || undefined, publisher: r.publisher?.trim() || undefined, year: r.year || undefined, isbn: r.isbn ? cleanIsbn(r.isbn) : undefined, type, library: input.library, collection: input.collection, status: 'Available' };
+    const book: Book = { id: uid('b'), accession: r.accession, title: r.title.trim(), subtitle: r.subtitle?.trim() || undefined, author: r.author?.trim() || undefined, publisher: r.publisher?.trim() || undefined, year: r.year || undefined, isbn: r.isbn ? cleanIsbn(r.isbn) : undefined, type, library: input.library, collection: input.collection, status: r.status ?? 'Available' };
     all.push(book); added.push(book);
   });
   if (!added.length) return { ok: false, errors: errors.length ? errors.slice(0, 40) : ['There were no books to add.'] };
@@ -401,6 +425,18 @@ export function importBooks(input: { rows: Array<Partial<BookDetails> & { access
     return { ...x, books: [...x.books, ...added], events: [ev, ...x.events], memory };
   });
   return { ok: true, errors: errors.slice(0, 40), message: `${added.length} book${added.length > 1 ? 's' : ''} added${errors.length ? `, ${errors.length} skipped` : ''}.` };
+}
+/** A book the old records mark as issued, with no borrower on file: put it back on the shelf. */
+export function markReturnedUnknown(bookId: string): Result {
+  const s = getState();
+  const b = bookById(s, bookId);
+  if (!b || b.status !== 'Issued') return fail('That book is not marked as issued.');
+  if (s.loans.some((l) => !l.returnedOn && l.bookId === bookId)) return fail('This book is recorded with a borrower. Return it from their file.');
+  const slices = { books: s.books, loans: s.loans, pending: s.pending, fines: s.fines, events: s.events };
+  const books = s.books.map((k) => (k.id === bookId ? { ...k, status: 'Available' as BookStatus } : k));
+  setUndo({ label: 'Marked returned', revert: makeRevert(slices, { ...slices, books }) });
+  setState((x) => ({ ...x, books }));
+  return done(`“${b.title}” is marked as returned.`);
 }
 /** Removes the dummy people, books and records but keeps passwords, settings, classes and preferences. */
 export function startEmpty() {

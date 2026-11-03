@@ -4,18 +4,19 @@ import { ErrorList, TextField } from '../../components/ui/Field';
 import { Modal } from '../../components/ui/Modal';
 import { Select } from '../../components/ui/Select';
 import { notify } from '../../components/ui/toast';
-import { gradesFor, sectionsOf } from '../../domain/rules';
+import { sectionsOf } from '../../domain/rules';
+import { enabledGrades } from '../../sync/config';
 import { useStore } from '../../store/store';
 import type { Student, Teacher } from '../../domain/types';
 import { addStudent, addTeacher, bulkAddStudents, bulkAddTeachers, updateStudent, updateTeacher } from '../../store/actions';
 
-const ALL_GRADES = [...gradesFor('jr'), ...gradesFor('sr')];
+const ALL_GRADES = enabledGrades;
 
 export function StudentDialog({ open, onClose, student, defaults }: { open: boolean; onClose: () => void; student?: Student; defaults?: { grade?: number; section?: string } }) {
   const sectionMap = useStore((s) => s.sections);
   const [name, setName] = useState(student?.name ?? '');
   const [gr, setGr] = useState(student?.grNo ?? '');
-  const [grade, setGrade] = useState(student?.grade ?? defaults?.grade ?? 6);
+  const [grade, setGrade] = useState(student?.grade ?? defaults?.grade ?? ALL_GRADES[0] ?? 6);
   const [section, setSection] = useState(student?.section ?? defaults?.section ?? 'A');
   const [errors, setErrors] = useState<string[]>([]);
 

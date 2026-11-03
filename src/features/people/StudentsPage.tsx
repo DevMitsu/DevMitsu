@@ -7,9 +7,10 @@ import { Panel } from '../../components/ui/Panel';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
 import { Tabs } from '../../components/ui/Tabs';
-import { gradesFor, LIBRARIES, libraryForGrade, norm, sectionsOf } from '../../domain/rules';
+import { LIBRARIES, libraryForGrade, norm, sectionsOf } from '../../domain/rules';
 import { openLoansOf } from '../../domain/queries';
 import { useStore } from '../../store/store';
+import { enabledGrades } from '../../sync/config';
 import { BulkAddDialog, BulkTeachersDialog, StudentDialog, TeacherDialog } from './PersonDialogs';
 
 type Tab = 'students' | 'teachers';
@@ -38,7 +39,7 @@ export function StudentsPage() {
       <div className="my-4 flex flex-wrap items-end gap-3">
         <label className="block text-[13px] font-medium">Search<input value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} placeholder={tab === 'students' ? 'Name or GR no.' : 'Name or department'} className="mt-1.5 block h-10 w-64 rounded-control border border-line bg-panel px-3 text-sm font-normal hover:border-primary/40" /></label>
         {tab === 'students' && (<>
-          <Select label="Class" value={grade} onChange={(e) => { setGrade(e.target.value); setPage(0); }} className="w-36"><option value="all">All</option>{[...gradesFor('jr'), ...gradesFor('sr')].map((g) => <option key={g} value={g}>Class {g}</option>)}</Select>
+          <Select label="Class" value={grade} onChange={(e) => { setGrade(e.target.value); setPage(0); }} className="w-36"><option value="all">All</option>{enabledGrades.map((g) => <option key={g} value={g}>Class {g}</option>)}</Select>
           <Select label="Section" value={section} onChange={(e) => { setSection(e.target.value); setPage(0); }} className="w-32"><option value="all">All</option>{(grade === 'all' ? [...new Set(Object.values(state.sections).flat())].sort() : sectionsOf(state.sections, Number(grade))).map((s) => <option key={s}>{s}</option>)}</Select>
           <p className="pb-2.5 text-sm text-muted">{students.length} students</p>
         </>)}

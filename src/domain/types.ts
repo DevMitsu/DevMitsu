@@ -155,6 +155,8 @@ export interface Prefs {
   warnOverdue: boolean;
   blockOverdue: boolean;
   timetableView: 'today' | 'week';
+  /** Sign out after this many minutes without activity. 0 = never. */
+  idleMinutes: number;
 }
 
 export interface AcademicYear {
