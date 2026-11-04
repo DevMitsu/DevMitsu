@@ -31,6 +31,14 @@ export async function startSync() {
   }
 }
 
+// Never lose typed work silently: save as soon as the page is hidden, and warn before closing with unsaved changes.
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') engine?.saveNow(); });
+  window.addEventListener('beforeunload', (e) => {
+    if (engine?.hasUnsaved()) { engine.saveNow(); e.preventDefault(); e.returnValue = ''; }
+  });
+}
+
 export async function stopSync() {
   if (!engine) return;
   try { await engine.settle(); } catch { /* signing out anyway */ }

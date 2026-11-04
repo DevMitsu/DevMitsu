@@ -21,6 +21,7 @@ export class MemoryRemote implements Remote {
   }
 
   async apply(ops: Op[]): Promise<void> {
+    if ((globalThis as { __alxOffline?: boolean }).__alxOffline) throw new RemoteError('network', 'Failed to fetch');   // test hook: pretend the internet is down
     const wait = (globalThis as { __alxApplyDelay?: number }).__alxApplyDelay ?? this.delay;   // test hook: slow this device's saves
     if (wait) await new Promise((r) => setTimeout(r, wait));
     const db = read() as Record<string, { bookId?: string; returnedOn?: string; accession?: number; type?: string }>;

@@ -93,6 +93,17 @@ export class SyncEngine {
     this.unsubs = [];
   }
 
+  /** True while there are changes this device has not managed to save yet. */
+  hasUnsaved(): boolean {
+    return this.flushing || this.diff().ops.length > 0;
+  }
+
+  /** Saves right now instead of waiting for the short pause (used when the page is being hidden or closed). */
+  saveNow() {
+    window.clearTimeout(this.timer);
+    void this.flush();
+  }
+
   /** Waits until everything typed so far has been saved. */
   async settle(): Promise<void> {
     window.clearTimeout(this.timer);
