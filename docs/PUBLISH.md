@@ -35,3 +35,33 @@ To update later: change the files, run the last command again.
 - The address is public. Without a library login nobody can see any data (Supabase rules). Make sure sign-ups are turned off (SETUP-SUPABASE.md, step 3).
 - Only the anon public key goes in `config.js`. Never the `service_role` key.
 - The site sends strict security headers (see `firebase.json`), including a rule that it may only talk to your Supabase project.
+
+---
+
+# Option 2: Netlify (a `yourname.netlify.app` address, or your own domain)
+
+This works the same way as Firebase and is the easiest of all: no command line.
+
+## Quick way (drag and drop, 2 minutes)
+1. Unzip `alexandria-netlify.zip`. Open `config.js` in Notepad, paste your Supabase Project URL and anon key between the quotes, save.
+2. Go to **app.netlify.com/drop**, sign up (free), and drag the unzipped folder onto the page.
+3. Netlify gives an address like `random-name-1234.netlify.app`. Open it, click the logo, sign in.
+4. Site settings, **Change site name**, to get something readable like `yourschool-library.netlify.app`.
+To update later: edit the files and drag the folder onto the site's **Deploys** page again.
+
+## Automatic way (every change goes live by itself)
+1. Netlify, **Add new site**, **Import an existing project**, **GitHub**, choose the `DevMitsu/DevMitsu` repository and the branch with the app.
+2. Netlify reads `netlify.toml`, so leave the build settings as they are (build `npm run build`, publish `dist`).
+3. Before deploying open **Site configuration, Environment variables** and add:
+   - `SUPABASE_URL` = your Project URL
+   - `SUPABASE_ANON_KEY` = your anon public key
+   - `LIBRARIES` = `sr` (change to `sr,jr` when the Jr. Library is ready)
+   The build writes them into `config.js`, so no keys are stored in the code.
+4. Click **Deploy**.
+
+## Your own domain on Netlify
+**Domain management, Add a domain**, type it, and follow the DNS steps shown. The https lock is automatic.
+
+## Notes
+- `public/_headers` gives Netlify the same security rules as the Firebase setup (the site may only talk to your own Supabase project).
+- A Netlify address is public. Without a library login nobody can see any data, provided sign-ups are off in Supabase.
