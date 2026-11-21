@@ -70,11 +70,23 @@ export function BulkAddDialog({ open, onClose }: { open: boolean; onClose: () =>
   const [text, setText] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
 
-  const parsed = text.split('\n').map((l) => l.trim()).filter(Boolean).map((line) => {
-    const [name, g, sec, gr] = line.split(',').map((x) => x.trim());
-    const grade = Number(g);
-    const ok = !!name && ALL_GRADES.includes(grade) && !!sec && sectionsOf(sectionMap, grade).includes(sec.toUpperCase());
-    return { line, name: name ?? '', grade, section: (sec ?? '').toUpperCase(), grNo: gr, ok };
+  const [cls, setCls] = useState('');
+  const [sec0, setSec0] = useState('');
+  const fixed = cls !== '' && sec0 !== '';
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const body = /^(sr\.?\s*no|s\.?\s*no|roll|name|student)/i.test(lines[0] ?? '') ? lines.slice(1) : lines;
+  const parsed = body.map((line) => {
+    const cells = line.split(/[\t,]/).map((x) => x.trim());
+    let name: string, grade: number, section: string, gr: string | undefined;
+    if (fixed) {
+      // One class per file: columns are name and optionally GR no. A leading serial or roll number is ignored.
+      const rest = /^\d{1,3}$/.test(cells[0] ?? '') && cells.length > 1 ? cells.slice(1) : cells;
+      [name = '', gr] = rest; grade = Number(cls); section = sec0;
+    } else {
+      const [n, g, sec, grNo] = cells; name = n ?? ''; grade = Number(g); section = (sec ?? '').toUpperCase(); gr = grNo;
+    }
+    const ok = !!name && ALL_GRADES.includes(grade) && !!section && sectionsOf(sectionMap, grade).includes(section.toUpperCase());
+    return { line, name, grade, section: section.toUpperCase(), grNo: gr || undefined, ok };
   });
   const good = parsed.filter((p) => p.ok);
 
@@ -84,10 +96,21 @@ export function BulkAddDialog({ open, onClose }: { open: boolean; onClose: () =>
     if (res.ok && !res.errors.length) { notify(res); onClose(); } else if (res.ok) notify(res);
   };
   return (
-    <Modal open={open} onClose={onClose} size="lg" title="Add many students" description="One student per line: name, class, section and optionally the GR no."
+    <Modal open={open} onClose={onClose} size="lg" title="Add many students" description={fixed ? 'One student per line: name, then GR no. if you have it. Paste straight from Excel.' : 'One student per line: name, class, section and optionally the GR no.'}
       footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={save} disabled={!good.length}>Add {good.length || ''} student{good.length === 1 ? '' : 's'}</Button></>}>
       <div className="space-y-3">
         <ErrorList errors={errors} />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="block text-[13px] font-medium">This list is for class
+            <select value={cls} onChange={(e) => { setCls(e.target.value); setSec0(''); }} className="mt-1.5 h-10 w-full rounded-control border border-line bg-panel px-2 text-sm font-normal"><option value="">Each line says its class</option>{ALL_GRADES.map((g) => <option key={g} value={g}>Class {g}</option>)}</select>
+          </label>
+          {cls !== '' && <label className="block text-[13px] font-medium">Section
+            <select value={sec0} onChange={(e) => setSec0(e.target.value)} className="mt-1.5 h-10 w-full rounded-control border border-line bg-panel px-2 text-sm font-normal"><option value="">Choose</option>{sectionsOf(sectionMap, Number(cls)).map((x) => <option key={x}>{x}</option>)}</select>
+          </label>}
+          <label className="block text-[13px] font-medium">Or open a file (CSV)
+            <input type="file" accept=".csv,.txt,.tsv" onChange={(e) => { const f = e.target.files?.[0]; if (f) void f.text().then((t) => { setText(t); setErrors([]); }); }} className="mt-1.5 block w-full text-sm font-normal" />
+          </label>
+        </div>
         <label className="block text-[13px] font-medium">Student list
           <textarea value={text} onChange={(e) => { setText(e.target.value); setErrors([]); }} rows={8} placeholder={'Aarav Shah, 9, B\nDiya Mehta, 9, B, GR2001'} className="mt-1.5 w-full rounded-control border border-line bg-panel px-3 py-2 font-mono text-sm font-normal" />
         </label>

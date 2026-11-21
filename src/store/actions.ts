@@ -566,7 +566,7 @@ export function startNewYear(plan: YearPlan): Result {
   if (plan.endsOn <= plan.startsOn) return fail('The year must end after it starts.');
   if (plan.label === s.academicYear.label) return fail(`The academic year is already ${plan.label}.`);
   const r = computeRollover(s.students, plan);
-  const ev: AppEvent = { id: uid('e'), date: todayISO(), type: 'promotion', detail: `New year ${plan.label}: ${r.movedUp} students moved up, ${r.left} left from class 12` };
+  const ev: AppEvent = { id: uid('e'), date: todayISO(), type: 'promotion', detail: `New year ${plan.label}: ${r.movedUp} students placed (${r.exceptions} exceptions), ${r.left} left school` };
   setState((x) => ({
     ...x,
     students: r.students,

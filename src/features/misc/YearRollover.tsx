@@ -6,7 +6,7 @@ import { Checkbox, ErrorList, TextField } from '../../components/ui/Field';
 import { notify } from '../../components/ui/toast';
 import { Link } from 'react-router-dom';
 import { openLoansOf } from '../../domain/queries';
-import { computeRollover, type YearPlan } from '../../domain/rollover';
+import { computeRollover, type RolloverOverride, type YearPlan } from '../../domain/rollover';
 import { gradesFor, sectionsOf } from '../../domain/rules';
 import { startNewYear } from '../../store/actions';
 import { useStore } from '../../store/store';
@@ -28,13 +28,15 @@ export function YearRollover() {
   const [shuffle, setShuffle] = useState<Record<number, boolean>>({});
   const [clearTimetable, setClearTimetable] = useState(true);
   const [confirm, setConfirm] = useState(false);
+  const [overrides, setOverrides] = useState<Record<string, RolloverOverride>>({});
+  const [find, setFind] = useState('');
   const [letter, setLetter] = useState<Record<number, string>>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [doneMsg, setDoneMsg] = useState('');
   const [bulk, setBulk] = useState(false);
 
-  const plan: YearPlan = { label, startsOn, endsOn, sections, shuffle, clearTimetable };
-  const result = useMemo(() => computeRollover(state.students, plan), [state.students, label, sections, shuffle]); // eslint-disable-line
+  const plan: YearPlan = { label, startsOn, endsOn, sections, shuffle, clearTimetable, overrides };
+  const result = useMemo(() => computeRollover(state.students, plan), [state.students, label, sections, shuffle, overrides]); // eslint-disable-line
   const active = state.students.filter((s) => s.active);
   const withBooks = active.filter((s) => openLoansOf(state, { type: 'student', id: s.id }).length > 0);
   const toSr = active.filter((s) => s.grade === 5).length;
@@ -67,7 +69,7 @@ export function YearRollover() {
     );
   }
 
-  const steps = ['Year', 'Classes', 'Review'];
+  const steps = ['Year', 'Classes', 'Exceptions', 'Review'];
   return (
     <div className="space-y-5">
       <ol className="flex flex-wrap gap-2" aria-label="Steps">
@@ -125,9 +127,47 @@ export function YearRollover() {
       )}
 
       {step === 3 && (
+        <div className="space-y-3">
+          <p className="text-sm text-muted">Everyone moves up one class. Use this only for the few students who do not: someone repeating the year, leaving school, or going to a different class or section.</p>
+          <TextField label="Find a student" value={find} onChange={setFind} hint="Type a name or GR no." />
+          {find.trim().length > 1 && (
+            <ul className="divide-y divide-line rounded-control border border-line">
+              {active.filter((x) => `${x.name} ${x.grNo}`.toLowerCase().includes(find.trim().toLowerCase())).slice(0, 6).map((x) => (
+                <li key={x.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm"><span>{x.name} <span className="text-muted">· {x.grade}{x.section}{x.grNo ? ` · ${x.grNo}` : ''}</span></span>
+                  <Button size="sm" disabled={!!overrides[x.id]} onClick={() => { setOverrides({ ...overrides, [x.id]: { action: 'stay' } }); setFind(''); }}>Add exception</Button></li>
+              ))}
+            </ul>
+          )}
+          {Object.keys(overrides).length === 0 ? <p className="text-[13px] text-muted">No exceptions. Everyone moves up.</p> : (
+            <ul className="space-y-2">
+              {Object.entries(overrides).map(([id, o]) => {
+                const st = state.students.find((x) => x.id === id);
+                if (!st) return null;
+                const kind = o.action;
+                const toGrade = o.action === 'to' ? o.grade : st.grade;
+                return (
+                  <li key={id} className="flex flex-wrap items-center gap-2 rounded-control border border-line p-2 text-sm">
+                    <span className="min-w-40 flex-1 font-medium">{st.name}<span className="block text-xs font-normal text-muted">now {st.grade}{st.section}</span></span>
+                    <select aria-label={`What happens to ${st.name}`} value={kind} onChange={(e) => { const v = e.target.value; setOverrides({ ...overrides, [id]: v === 'to' ? { action: 'to', grade: Math.min(12, st.grade + 1), section: sections[Math.min(12, st.grade + 1)]?.[0] } : { action: v as 'stay' | 'leave' } }); }} className="h-9 rounded-control border border-line bg-panel px-2 text-sm">
+                      <option value="stay">Repeats class {st.grade}</option><option value="to">Goes to a chosen class</option><option value="leave">Leaves school</option>
+                    </select>
+                    {o.action === 'to' && (<>
+                      <select aria-label="Class" value={toGrade} onChange={(e) => { const g = Number(e.target.value); setOverrides({ ...overrides, [id]: { action: 'to', grade: g, section: sections[g]?.[0] } }); }} className="h-9 rounded-control border border-line bg-panel px-2 text-sm">{GRADES.map((g) => <option key={g} value={g}>Class {g}</option>)}</select>
+                      <select aria-label="Section" value={o.section ?? ''} onChange={(e) => setOverrides({ ...overrides, [id]: { action: 'to', grade: toGrade, section: e.target.value } })} className="h-9 rounded-control border border-line bg-panel px-2 text-sm">{(sections[toGrade] ?? []).map((x) => <option key={x}>{x}</option>)}</select>
+                    </>)}
+                    <Button size="sm" variant="ghost" onClick={() => { const n = { ...overrides }; delete n[id]; setOverrides(n); }}>Remove</Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {step === 4 && (
         <div className="space-y-4">
           <dl className="grid gap-3 sm:grid-cols-4">
-            {[['Moving up', result.movedUp], ['Leaving (class 12)', result.left], ['Class 5 to Sr. Library', toSr], ['Re-dealt classes', Object.values(shuffle).filter(Boolean).length]].map(([l, v]) => (
+            {[['Moving up', result.movedUp], ['Leaving (class 12)', result.left], ['Class 5 to Sr. Library', toSr], ['Exceptions', result.exceptions]].map(([l, v]) => (
               <div key={l as string} className="rounded-control border border-line p-3"><dt className="text-[13px] text-muted">{l}</dt><dd className="text-xl font-semibold tabular-nums">{v}</dd></div>
             ))}
           </dl>
@@ -143,7 +183,7 @@ export function YearRollover() {
 
       <div className="flex gap-2 border-t border-line pt-4">
         <Button icon={<ArrowLeft className="size-4" aria-hidden />} onClick={() => setStep((s) => s - 1)} disabled={step === 1}>Back</Button>
-        {step < 3 && <Button variant="primary" icon={<ArrowRight className="size-4" aria-hidden />} onClick={() => setStep((s) => s + 1)} disabled={step === 1 && (!label.trim() || endsOn <= startsOn)}>Next</Button>}
+        {step < 4 && <Button variant="primary" icon={<ArrowRight className="size-4" aria-hidden />} onClick={() => setStep((s) => s + 1)} disabled={step === 1 && (!label.trim() || endsOn <= startsOn)}>Next</Button>}
         {step === 1 && endsOn <= startsOn && <Badge tone="amber">The year must end after it starts</Badge>}
       </div>
     </div>
