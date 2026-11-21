@@ -362,3 +362,96 @@ describe('first-run setup and backups', () => {
     expect(getState().items.length).toBeGreaterThan(30);
   });
 });
+
+describe('fines for broken equipment', () => {
+  const id = () => getState().items.find((i) => i.name === 'Beaker')!.id;
+  const setup = () => {
+    fresh();
+    A.addItem({ labId: 'chemistry', categoryId: 'glassware', name: 'Beaker', quantity: 20, unit: 'pcs', unitCost: 90, status: 'Good', custom: {} });
+  };
+  const broke = (extra: Record<string, unknown> = {}, qty = 3) => A.saveRecord('breakage', 'chemistry', { date: todayStr(), item: id(), quantity: qty, who: 'Aarav', class: 'Class 9', ...extra });
+  const rec = (rid: string) => getState().records.find((r) => r.id === rid)!;
+
+  it('a fine starts as Pending, and stock still goes down', () => {
+    setup();
+    const r = broke({ fine: 270 });
+    expect(rec(r).values).toMatchObject({ fine: 270, fineStatus: 'Pending' });
+    expect(getState().items[0].quantity).toBe(17);
+  });
+  it('no fine means no fine status either', () => {
+    setup();
+    const r = broke({ fineStatus: 'Paid', finePaidOn: '2026-01-01' });
+    expect(rec(r).values.fine).toBeUndefined();
+    expect(rec(r).values.fineStatus).toBeUndefined();
+    expect(rec(r).values.finePaidOn).toBeUndefined();
+  });
+  it('marking a fine paid records the date and keeps the receipt note', () => {
+    setup();
+    const r = broke({ fine: 270 });
+    A.setFine(r, 'Paid', { date: '2026-11-01', note: 'Receipt 7' });
+    expect(rec(r).values).toMatchObject({ fineStatus: 'Paid', finePaidOn: '2026-11-01', fineNote: 'Receipt 7' });
+    A.setFine(r, 'Pending');
+    expect(rec(r).values.finePaidOn).toBeUndefined();
+  });
+  it('waiving needs a reason', () => {
+    setup();
+    const r = broke({ fine: 270 });
+    expect(() => A.setFine(r, 'Waived')).toThrow(/why/);
+    expect(() => A.setFine(r, 'Waived', { note: '   ' })).toThrow(/why/);
+    A.setFine(r, 'Waived', { note: 'Faulty glass' });
+    expect(rec(r).values).toMatchObject({ fineStatus: 'Waived', fineNote: 'Faulty glass' });
+    expect(() => broke({ fine: 50, fineStatus: 'Waived' })).toThrow(/why the fine was waived/);
+  });
+  it('cannot change a fine on an entry that has none', () => {
+    setup();
+    const r = broke();
+    expect(() => A.setFine(r, 'Paid')).toThrow(/no fine/);
+  });
+  it('editing the entry keeps the fine, and deleting it puts the stock back', () => {
+    setup();
+    const r = broke({ fine: 270 });
+    broke({ fine: 180 }, 2); // a second entry
+    A.saveRecord('breakage', 'chemistry', { date: todayStr(), item: id(), quantity: 3, who: 'Aarav', fine: 300, fineStatus: 'Pending' }, r);
+    expect(rec(r).values.fine).toBe(300);
+    A.deleteRecord(r);
+    expect(getState().items[0].quantity).toBe(18);
+  });
+  it('suggests a fine from the item cost and the school’s percentage', async () => {
+    const { suggestedFine, fineTotals, finedRecords } = await import('./fines');
+    expect(suggestedFine({ unitCost: 90 }, 3, 100)).toBe(270);
+    expect(suggestedFine({ unitCost: 90 }, 3, 50)).toBe(135);
+    expect(suggestedFine({}, 3, 100)).toBeUndefined();
+    expect(suggestedFine({ unitCost: 90 }, 0, 100)).toBeUndefined();
+    setup();
+    const a = broke({ fine: 270 }); const b = broke({ fine: 100 }, 1); broke({ fine: 50 }, 1);
+    A.setFine(a, 'Paid'); A.setFine(b, 'Waived', { note: 'x' });
+    expect(fineTotals(finedRecords(getState()))).toEqual({ pending: 50, paid: 270, waived: 100 });
+  });
+  it('warns about a fine that has been unpaid too long, and only that', () => {
+    setup();
+    const old = broke({ date: addDays(todayStr(), -20), fine: 270 });
+    broke({ date: addDays(todayStr(), -2), fine: 90 }, 1);
+    const paid = broke({ date: addDays(todayStr(), -30), fine: 90 }, 1);
+    A.setFine(paid, 'Paid');
+    const alerts = computeAlerts(getState()).filter((a) => a.kind === 'fine-unpaid');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].id).toBe(`fine-${old}`);
+  });
+  it('shows up in the fines report and the sample data', async () => {
+    const { REPORTS } = await import('../features/reports/builders');
+    const s = buildSample({ ...emptyState(), setupDone: true });
+    const t = REPORTS.find((r) => r.id === 'fines')!.build({ state: s, scope: 'all', from: '0000', to: '9999' });
+    expect(t.rows).toHaveLength(3);
+    expect(t.notes?.[0]).toMatch(/to collect ₹270 · collected ₹650 · waived ₹45/);
+    expect(t.rows.every((r) => r.length === t.columns.length)).toBe(true);
+  });
+  it('adds the new questions to saved data from before fines existed', async () => {
+    const old = emptyState();
+    old.modules = old.modules.map((m) => (m.id === 'breakage' ? { ...m, fields: m.fields.filter((f) => !f.id.startsWith('fine')) } : m));
+    old.lists = old.lists.filter((l) => l.id !== 'fineStatus');
+    const m = migrate(old);
+    expect(m.modules.find((x) => x.id === 'breakage')!.fields.map((f) => f.id)).toEqual(expect.arrayContaining(['fine', 'fineStatus', 'finePaidOn', 'fineNote']));
+    expect(m.lists.some((l) => l.id === 'fineStatus')).toBe(true);
+    expect(m.settings.finePercent).toBe(100);
+  });
+});

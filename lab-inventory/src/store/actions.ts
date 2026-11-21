@@ -297,6 +297,18 @@ function saveRecordIn(d: D, moduleId: string, labId: string, rawValues: Values, 
   const values = cleanValues(m, rawValues);
 
   // Per-kind tidying and rules
+  if (m.kind === 'breakage') {
+    // A fine is only meaningful with an amount: with one it starts as Pending, without one the status goes away
+    const fine = num(values.fine) ?? 0;
+    if (fine > 0) {
+      if (!values.fineStatus) values.fineStatus = 'Pending';
+      if (values.fineStatus === 'Paid' && !values.finePaidOn) values.finePaidOn = todayStr();
+      if (values.fineStatus !== 'Paid') delete values.finePaidOn;
+      if (values.fineStatus === 'Waived' && !String(values.fineNote ?? '').trim()) fail('Fine note: say why the fine was waived.');
+    } else {
+      delete values.fine; delete values.fineStatus; delete values.finePaidOn;
+    }
+  }
   if (m.kind === 'requisition' && !values.name && values.item) values.name = itemIn(d, values.item as string).name;
   if (m.kind === 'requisition' && values.status === 'Received' && !values.receivedOn) values.receivedOn = todayStr();
   if (m.kind === 'loan') {
@@ -378,6 +390,26 @@ export function setRecordStatus(id: string, status: string) {
     if (m.kind === 'requisition' && status === 'Received' && !r.values.receivedOn) r.values.receivedOn = todayStr();
     r.updatedAt = stamp();
   });
+}
+
+/** Marks a fine paid, waived (a reason is required) or open again. */
+export function setFine(id: string, status: 'Pending' | 'Paid' | 'Waived', o: { date?: string; note?: string } = {}) {
+  const s = getState();
+  const r0 = s.records.find((x) => x.id === id);
+  mutate(
+    'Change fine',
+    (d) => {
+      const r = d.records.find((x) => x.id === id) ?? fail('That entry no longer exists.');
+      if (!(num(r.values.fine) ?? 0)) fail('There is no fine on this entry.');
+      const note = (o.note ?? '').trim();
+      if (status === 'Waived' && !note) fail('Say why the fine is being waived.');
+      r.values.fineStatus = status;
+      if (status === 'Paid') r.values.finePaidOn = o.date || todayStr(); else delete r.values.finePaidOn;
+      if (note) r.values.fineNote = note;
+      r.updatedAt = stamp();
+    },
+    { log: `Fine ${status === 'Pending' ? 'reopened' : status.toLowerCase()}: ${s.settings.currency}${r0?.values.fine ?? ''} for ${String(s.items.find((i) => i.id === r0?.values.item)?.name ?? 'an item')}`, labId: r0?.labId },
+  );
 }
 
 export function returnLoan(id: string, date: string, condition?: string, note?: string) {

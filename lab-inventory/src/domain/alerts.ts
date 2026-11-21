@@ -14,7 +14,8 @@ export type AlertKind =
   | 'accident-open'
   | 'followup-due'
   | 'storage-conflict'
-  | 'requirement-urgent';
+  | 'requirement-urgent'
+  | 'fine-unpaid';
 
 export interface Alert {
   id: string;
@@ -40,6 +41,7 @@ export const ALERT_LABEL: Record<AlertKind, string> = {
   'followup-due': 'Follow-up due',
   'storage-conflict': 'Storage conflict',
   'requirement-urgent': 'Urgent requirement',
+  'fine-unpaid': 'Unpaid fine',
 };
 
 export function computeAlerts(s: AppState, today = todayStr()): Alert[] {
@@ -94,6 +96,12 @@ export function computeAlerts(s: AppState, today = todayStr()): Alert[] {
         });
         const fu = r.values.followUp as string | undefined;
         if (fu && fu <= today) out.push({ id: `fu-${r.id}`, kind: 'followup-due', severity: 'high', labId: r.labId, to: `m/${m.id}`, title: `Follow-up due: ${String(r.values.type ?? r.values.substance ?? itemName(r.values.item))}`, detail: `${m.singular} · was due ${fmtDate(fu)}` });
+      }
+    }
+    if (m.kind === 'breakage' && (num(r.values.fine) ?? 0) > 0 && (r.values.fineStatus ?? 'Pending') === 'Pending') {
+      const since = String(r.values.date ?? '');
+      if (since && daysBetween(since, today) >= s.settings.fineUnpaidDays) {
+        out.push({ id: `fine-${r.id}`, kind: 'fine-unpaid', severity: 'low', labId: r.labId, to: 'fines', title: `Unpaid fine: ${s.settings.currency}${num(r.values.fine)} for ${itemName(r.values.item)}`, detail: `${String(r.values.who ?? 'Someone')}${r.values.class ? ` (${r.values.class})` : ''} · charged ${fmtDate(since)} (${daysBetween(since, today)} days ago)` });
       }
     }
     if (m.kind === 'requisition' && r.values.priority === 'Urgent' && !m.closedValues?.includes(String(r.values.status ?? ''))) {

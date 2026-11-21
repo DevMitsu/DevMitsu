@@ -259,6 +259,10 @@ export interface Settings {
   serviceWarnDays: number;
   loanDefaultDays: number;
   allowNegativeStock: boolean;
+  /** Suggested fine for a breakage, as a percentage of the item's cost. */
+  finePercent: number;
+  /** Warn about a fine that is still unpaid after this many days. */
+  fineUnpaidDays: number;
   /** Pairs of storage groups that must not share a location. */
   incompatible: [string, string][];
   /** Item code pattern. Tokens: {LAB} {CAT} {NNNN} */

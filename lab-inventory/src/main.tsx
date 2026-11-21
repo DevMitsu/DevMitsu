@@ -8,6 +8,7 @@ import { ALL, activeLabs } from './domain/inventory';
 import { AlertsProvider } from './lib/alerts';
 import { AlertsPage } from './features/alerts/AlertsPage';
 import { StoragePage } from './features/alerts/StoragePage';
+import { FinesPage } from './features/fines/FinesPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { DirectoryPage } from './features/directory/DirectoryPage';
 import { ItemDetailPage } from './features/inventory/ItemDetailPage';
@@ -83,6 +84,7 @@ function Local() {
             <Route path="items" element={<ItemsPage />} />
             <Route path="items/:id" element={<ItemDetailPage />} />
             <Route path="m/:moduleId" element={<RecordsPage />} />
+            <Route path="fines" element={<FinesPage />} />
             <Route path="stocktake" element={<StocktakePage />} />
             <Route path="storage" element={<StoragePage />} />
             <Route path="practicals" element={<PracticalsPage />} />

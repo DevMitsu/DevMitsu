@@ -3,6 +3,7 @@ import { Button, Checkbox, Field, Modal, Suggest } from '../../components/ui';
 import { attempt, notify, tryDo } from '../../components/toast';
 import { todayStr } from '../../domain/dates';
 import { num } from '../../domain/fields';
+import { suggestedFine } from '../../domain/fines';
 import { outOnLoan } from '../../domain/inventory';
 import { closeUi } from '../../lib/ui';
 import { adjustStock, receiveRequirement, receiveStock, returnLoan, saveRecord, transferStock } from '../../store/actions';
@@ -117,6 +118,8 @@ export function ReturnDialog({ recordId }: { recordId: string }) {
   const total = num(rec?.values.quantity) ?? 1;
   const [bad, setBad] = useState('1');
   const [log, setLog] = useState(true);
+  const [fine, setFine] = useState('');
+  const { currency, finePercent } = useStore((s) => s.settings);
   if (!rec) return null;
   const close = () => closeUi('ret');
   const damaged = condition === 'Damaged' || condition === 'Missing parts';
@@ -124,7 +127,7 @@ export function ReturnDialog({ recordId }: { recordId: string }) {
   const submit = () => {
     if (!tryDo(() => returnLoan(rec.id, date, condition, note || undefined))) return;
     if (damaged && log && hasBreakage && item && badN > 0) {
-      attempt(() => saveRecord('breakage', rec.labId, { date, item: item.id, quantity: Math.min(badN, total), cause: 'Other', who: rec.values.borrower as string, replace: true, notes: `Found ${condition.toLowerCase()} on return` }));
+      attempt(() => saveRecord('breakage', rec.labId, { date, item: item.id, quantity: Math.min(badN, total), cause: 'Other', who: rec.values.borrower as string, class: rec.values.group as string | undefined, replace: true, fine: numOrUndef(fine), notes: `Found ${condition.toLowerCase()} on return` }));
     }
     notify('Marked as returned', 'ok', true);
     close();
@@ -144,6 +147,14 @@ export function ReturnDialog({ recordId }: { recordId: string }) {
           <div className="rounded-lg bg-surface2 p-3">
             <Checkbox checked={log} onChange={setLog}>Also log the damaged units as breakage (takes them off the stock)</Checkbox>
             {log && <Field label="How many units are damaged or missing?" className="mt-2"><input className="input" type="number" min="1" max={total} value={bad} onChange={(e) => setBad(e.target.value)} /></Field>}
+            {log && (() => {
+              const sug = suggestedFine(item, Math.min(badN, total), finePercent);
+              return (
+                <Field label={`Fine for ${String(rec.values.borrower ?? 'the borrower')} (optional)`} className="mt-2" help={sug !== undefined ? `Suggested ${currency}${sug}: ${finePercent}% of ${currency}${item?.unitCost} × ${Math.min(badN, total)}` : 'Leave empty for no fine'}>
+                  <div className="flex gap-2"><input className="input" type="number" min="0" step="any" value={fine} onChange={(e) => setFine(e.target.value)} placeholder={sug !== undefined ? String(sug) : ''} />{sug !== undefined && <Button size="sm" onClick={() => setFine(String(sug))}>Use</Button>}</div>
+                </Field>
+              );
+            })()}
           </div>
         )}
         <Field label="Note"><input className="input" value={note} onChange={(e) => setNote(e.target.value)} /></Field>

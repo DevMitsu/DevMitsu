@@ -66,6 +66,7 @@ export const DEFAULT_LISTS: ListDef[] = [
   L('maintType', 'Maintenance types', ['Calibration', 'Servicing', 'Repair', 'Safety inspection', 'Cleaning', 'Testing', 'Other']),
   L('maintResult', 'Maintenance results', ['Passed / OK', 'Needs follow-up', 'Failed'], { 'Passed / OK': 'green', 'Needs follow-up': 'amber', Failed: 'red' }),
   L('condition', 'Condition', ['Good', 'Minor wear', 'Damaged', 'Missing parts'], { Good: 'green', 'Minor wear': 'amber', Damaged: 'red', 'Missing parts': 'red' }),
+  L('fineStatus', 'Fine status', ['Pending', 'Paid', 'Waived'], { Pending: 'amber', Paid: 'green', Waived: 'gray' }),
   L('diaryCategory', 'Diary categories', ['General', 'Safety', 'Maintenance', 'Delivery / supplier', 'Meeting', 'Reminder']),
   L('materials', 'Materials', ['Borosilicate glass', 'Soda glass', 'Plastic', 'Porcelain', 'Metal', 'Quartz', 'Rubber', 'Wood']),
   L('physicalState', 'Physical state', ['Solid', 'Liquid', 'Gas', 'Solution', 'Powder']),
@@ -219,8 +220,8 @@ export const DEFAULT_MODULES: ModuleDef[] = [
   },
   {
     id: 'breakage', kind: 'breakage', name: 'Breakage & loss', singular: 'Breakage', icon: 'hammer', builtin: true, enabled: true, labIds: [], order: 4,
-    description: 'Broken, damaged or missing items. Stock goes down automatically.',
-    dateFieldId: 'date', listFieldIds: ['date', 'item', 'quantity', 'cause', 'who', 'replace'],
+    description: 'Broken, damaged or missing items. Stock goes down automatically, and a fine can be charged to whoever broke it.',
+    dateFieldId: 'date', listFieldIds: ['date', 'item', 'quantity', 'cause', 'who', 'replace', 'fine', 'fineStatus'],
     fields: [
       f('date', 'Date', 'date', { required: true, default: '@today', core: true }),
       f('item', 'Item', 'item', { required: true, core: true }),
@@ -230,6 +231,10 @@ export const DEFAULT_MODULES: ModuleDef[] = [
       f('class', 'Class', 'select', { listId: 'classes' }),
       f('replace', 'Needs replacement', 'checkbox', { default: true }),
       f('cost', 'Replacement cost', 'money'),
+      f('fine', 'Fine charged', 'money', { help: 'Leave empty if nobody is being fined' }),
+      f('fineStatus', 'Fine status', 'select', { listId: 'fineStatus' }),
+      f('finePaidOn', 'Fine paid on', 'date'),
+      f('fineNote', 'Fine note', 'text', { placeholder: 'Receipt number, or why it was waived' }),
       f('notes', 'Notes', 'textarea', { full: true }),
     ],
   },
@@ -358,6 +363,8 @@ export const DEFAULT_SETTINGS: Settings = {
   serviceWarnDays: 30,
   loanDefaultDays: 7,
   allowNegativeStock: false,
+  finePercent: 100,
+  fineUnpaidDays: 14,
   incompatible: [
     ['Acids', 'Bases'],
     ['Oxidisers', 'Flammables'],

@@ -11,7 +11,7 @@ export type Snapshot = Map<string, Map<string, unknown>>;
  * The others (theme, text size, who is working, chosen columns, last backup) belong to one computer.
  */
 const SHARED_SETTINGS = [
-  'schoolName', 'currency', 'expiryWarnDays', 'serviceWarnDays', 'loanDefaultDays', 'allowNegativeStock', 'incompatible', 'codeFormat',
+  'schoolName', 'currency', 'expiryWarnDays', 'serviceWarnDays', 'loanDefaultDays', 'allowNegativeStock', 'finePercent', 'fineUnpaidDays', 'incompatible', 'codeFormat',
 ] as const satisfies readonly (keyof Settings)[];
 
 export const MAX_ACTIVITY = 600;

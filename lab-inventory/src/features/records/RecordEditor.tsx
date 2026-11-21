@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { addDays, fmtDateTime, todayStr } from '../../domain/dates';
 import { defaultValues, num, validate } from '../../domain/fields';
+import { suggestedFine } from '../../domain/fines';
 import { ALL, modulesForLab, outOnLoan } from '../../domain/inventory';
 import type { Value, Values } from '../../domain/types';
 import { Field, Button, Modal, Badge } from '../../components/ui';
@@ -26,6 +27,7 @@ export function RecordEditor({ moduleId, id, labId: initialLab, prefill }: Props
   const records = useStore((s) => s.records);
   const items = useStore((s) => s.items);
   const loanDays = useStore((s) => s.settings.loanDefaultDays);
+  const { currency, finePercent } = useStore((s) => s.settings);
   const mod = modules.find((m) => m.id === moduleId);
   const existing = id ? records.find((r) => r.id === id) : undefined;
 
@@ -134,7 +136,7 @@ export function RecordEditor({ moduleId, id, labId: initialLab, prefill }: Props
           </select>
         </Field>
       )}
-      <FieldGrid fields={mod.fields} values={values} onChange={set} errors={errors} ctx={{ labId, units: item ? { quantity: item.unit } : undefined }} />
+      <FieldGrid fields={mod.fields} values={values} onChange={set} errors={errors} hideIds={mod.kind === 'breakage' && !num(values.fine) ? ['fineStatus', 'finePaidOn', 'fineNote'] : []} ctx={{ labId, units: item ? { quantity: item.unit } : undefined }} />
       {item && STOCK_KINDS.includes(mod.kind) && (
         <p className={`mt-3 rounded-lg px-3 py-2 text-sm ${short ? 'tone-red' : 'bg-surface2 text-muted'}`}>
           {mod.kind === 'loan'
@@ -146,6 +148,18 @@ export function RecordEditor({ moduleId, id, labId: initialLab, prefill }: Props
             : ''}
         </p>
       )}
+      {mod.kind === 'breakage' && item && !mod.fields.find((f) => f.id === 'fine')?.hidden && (() => {
+        const sug = suggestedFine(item, qty ?? 0, finePercent);
+        if (sug === undefined) return item.unitCost == null ? <p className="help mt-3">Add a cost to {item.name} and a suggested fine will be offered here.</p> : null;
+        const same = num(values.fine) === sug;
+        return (
+          <p className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-surface2 px-3 py-2 text-sm">
+            <span className="text-muted">Suggested fine: <b className="text-ink">{currency}{sug}</b> ({finePercent}% of {currency}{item.unitCost} × {qty})</span>
+            {!same && <Button size="sm" onClick={() => set('fine', sug)}>Use this</Button>}
+            {num(values.fine) ? <Button size="sm" variant="ghost" onClick={() => set('fine', '')}>No fine</Button> : null}
+          </p>
+        );
+      })()}
       {existing && (
         <p className="mt-4 flex flex-wrap items-center gap-2 text-xs text-faint">
           Entered {fmtDateTime(existing.createdAt)}{existing.by ? ` by ${existing.by}` : ''}

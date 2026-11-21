@@ -148,9 +148,9 @@ export function buildSample(base: AppState): AppState {
   use('biology', 'Safranin stain', 20, 18, 'Stem cross-section', 'Class 11', 'Mrs. P. Nair');
 
   // Breakage, spills, disposal
-  lose('breakage', 'breakage', 'chemistry', 'Beaker 250 mL', 3, 9, { date: d(-9), cause: 'Student mishap', who: 'Class 9B', replace: true }, 'Breakage');
-  lose('breakage', 'breakage', 'chemistry', 'Burette 50 mL', 2, 25, { date: d(-25), cause: 'Dropped', replace: true, class: 'Class 11' }, 'Breakage');
-  lose('breakage', 'breakage', 'biology', 'Glass slides (blank, 75×25 mm)', 15, 7, { date: d(-7), cause: 'Student mishap', replace: true }, 'Breakage');
+  lose('breakage', 'breakage', 'chemistry', 'Beaker 250 mL', 3, 20, { date: d(-20), cause: 'Student mishap', who: 'Aarav Mehta', class: 'Class 9', replace: true, fine: 270, fineStatus: 'Pending' }, 'Breakage');
+  lose('breakage', 'breakage', 'chemistry', 'Burette 50 mL', 2, 25, { date: d(-25), cause: 'Dropped', who: 'Diya Nair', replace: true, class: 'Class 11', fine: 650, fineStatus: 'Paid', finePaidOn: d(-18), fineNote: 'Receipt 1042' }, 'Breakage');
+  lose('breakage', 'breakage', 'biology', 'Glass slides (blank, 75×25 mm)', 15, 7, { date: d(-7), cause: 'Student mishap', who: 'Rohan Das', class: 'Class 11', replace: true, fine: 45, fineStatus: 'Waived', fineNote: 'Slides were already cracked in the box' }, 'Breakage');
   lose('disposal', 'dispose', 'chemistry', 'Phenolphthalein indicator', 20, 40, { date: d(-40), reason: 'Expired', method: 'Collected as hazardous waste', by: 'Mr. K. Das' }, 'Disposal');
   lose('spill', 'spill', 'chemistry', 'Hydrochloric acid (conc.)', 100, 12, { when: `${d(-12)}T11:20`, severity: 'Minor', place: 'Student bench 4', cause: 'Bottle knocked over', cleanup: 'Neutralised', ppe: 'Gloves, goggles, apron', exposure: false, deduct: true, status: 'Closed', reporter: 'Dr. S. Iyer', description: 'Neutralised with sodium bicarbonate and wiped. Nobody was hurt.' }, 'Spill');
   lose('spill', 'spill', 'chemistry', 'Ethanol (absolute)', 250, 2, { when: `${d(-2)}T14:05`, severity: 'Moderate', place: 'Flammables cabinet', cause: 'Bottle cap not tightened', cleanup: 'Absorbed with spill kit', exposure: false, deduct: true, status: 'Open', followUp: d(-1), reporter: 'Mr. K. Das', description: 'Found leaking during the weekly check. Cabinet ventilated, no ignition sources nearby.' }, 'Spill');

@@ -21,6 +21,7 @@ Open **`releases/lab-inventory.html`** (double-click it, or put it on a pendrive
 | **Accidents** | Type, severity, people involved, first aid, parents informed, root cause, corrective action, follow-up date and status. "Days since the last accident" on the dashboard. |
 | **Spills** | Substance, amount, clean-up method, protective equipment, exposure. Optionally takes the lost amount off the stock. |
 | **Breakage & loss, Disposal & waste** | Cause, who, whether it needs replacing, disposal method and reason. Stock goes down. |
+| **Fines** | Charge a fine to whoever broke or lost equipment, on the breakage entry or when damaged equipment is returned. A suggested amount comes from the item's cost (the percentage is a setting). The Fines screen shows who owes what, with Mark paid, or Waive with a required reason, plus totals, a report, and an alert for fines left unpaid. |
 | **Issue & return** | Equipment lent to a teacher or class with a due date. Overdue loans are flagged. Returning damaged items can log the breakage in one step. |
 | **Requirements** | A purchase-request pipeline (requested → approved → ordered → received). Items below their reorder level are suggested automatically. Receiving an order adds the stock. |
 | **Practicals** | List what a practical needs per group. Check whether the lab has enough for *N* groups, raise requirements for what is missing, and record all the usage in one click. |

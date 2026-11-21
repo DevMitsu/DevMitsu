@@ -5,6 +5,7 @@ import { Icon } from '../components/icons';
 import { ConfirmHost, ToastHost, notify } from '../components/toast';
 import { Badge, Button, Popover, cx } from '../components/ui';
 import { ALL, activeLabs, modulesForLab } from '../domain/inventory';
+import { fineStatusOf, finedRecords } from '../domain/fines';
 import { useAlerts } from '../lib/alerts';
 import { useApplyPrefs } from '../lib/applyPrefs';
 import { scopePath, useScope } from '../lib/scope';
@@ -39,6 +40,7 @@ export function AppShell() {
   }, [lab, scope]);
   useEffect(() => setNav(false), [location.pathname]);
 
+  const finesDue = useMemo(() => finedRecords({ records: state.records, modules: state.modules }).filter((r) => (scope === ALL || r.labId === scope) && fineStatusOf(r) === 'Pending').length, [state.records, state.modules, scope]);
   const high = alerts.filter((a) => a.severity === 'high').length;
   const theme = state.settings.theme;
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -69,6 +71,7 @@ export function AppShell() {
       {link('storage', 'Storage check', 'shield')}
       {heading('Logs & records')}
       {modules.map((m) => link(`m/${m.id}`, m.name, m.icon))}
+      {modules.some((m) => m.kind === 'breakage') && link('fines', 'Fines', 'coins', finesDue)}
       {heading('Planning')}
       {link('practicals', 'Practicals', 'flask')}
       {link('reports', 'Reports', 'file')}

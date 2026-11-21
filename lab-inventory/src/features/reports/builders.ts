@@ -150,6 +150,18 @@ export const REPORTS: ReportDef[] = [
     },
   },
   {
+    id: 'fines', title: 'Fines', description: 'Fines charged for broken or lost equipment in a period: what is still to collect, what was paid, what was waived and why.', timed: true,
+    build: (c) => {
+      const s = c.state;
+      const { list } = recsOf(c, 'breakage');
+      const fined = list.filter((r) => (num(r.values.fine) ?? 0) > 0);
+      const sum = (st: string) => fined.filter((r) => (r.values.fineStatus ?? 'Pending') === st).reduce((n, r) => n + (num(r.values.fine) ?? 0), 0);
+      const rows = fined.map((r) => [labName(s, r.labId), fmtDate(String(r.values.date ?? '')), itemName(s, r.values.item), num(r.values.quantity) ?? '', String(r.values.who ?? ''), String(r.values.class ?? ''), num(r.values.fine) ?? '', String(r.values.fineStatus ?? 'Pending'), r.values.finePaidOn ? fmtDate(String(r.values.finePaidOn)) : '', String(r.values.fineNote ?? '')]);
+      return { title: 'Fines', columns: ['Lab', 'Date', 'Item', 'Qty', 'Broken by', 'Class', 'Fine', 'Status', 'Paid on', 'Note'], rows, numeric: [3, 6],
+        notes: [`${fined.length} fines · to collect ${money(s, sum('Pending'))} · collected ${money(s, sum('Paid'))} · waived ${money(s, sum('Waived'))}`] };
+    },
+  },
+  {
     id: 'loans', title: 'Equipment loans', description: 'Equipment lent out in a period and whether it is back.', timed: true,
     build: (c) => {
       const s = c.state;

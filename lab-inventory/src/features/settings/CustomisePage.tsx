@@ -93,6 +93,7 @@ function General() {
         <div className="grid gap-3">
           <Field label="Item code pattern" help="Tokens: {LAB} = lab code, {CAT} = category prefix, {NNNN} = running number. Example result: CHE-RGT-0007"><input className="input font-mono" value={s.codeFormat} onChange={(e) => updateSettings({ codeFormat: e.target.value })} /></Field>
           <Checkbox checked={s.allowNegativeStock} onChange={(v) => updateSettings({ allowNegativeStock: v })}>Allow stock to go below zero (otherwise using more than is in stock is refused)</Checkbox>
+          <Field label="Suggested fine for breakage" help="As a percentage of the item's cost. 100 = the full replacement cost. You can always change the amount on each entry."><div className="flex items-center gap-2"><input className="input w-24" type="number" min="0" max="500" value={s.finePercent} onChange={(e) => updateSettings({ finePercent: Math.max(0, Number(e.target.value) || 0) })} /><span className="text-sm text-muted">% of cost</span></div></Field>
           <Field label="Days equipment is lent for, by default"><input className="input w-24" type="number" min="1" value={s.loanDefaultDays} onChange={(e) => updateSettings({ loanDefaultDays: Math.max(1, Number(e.target.value) || 1) })} /></Field>
         </div>
       </Card>
@@ -432,6 +433,7 @@ function RulesTab() {
         <h2 className="mb-3 font-semibold">When to warn</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Warn this many days before expiry"><input className="input" type="number" min="0" value={s.expiryWarnDays} onChange={(e) => updateSettings({ expiryWarnDays: Math.max(0, Number(e.target.value) || 0) })} /></Field>
+          <Field label="Warn about a fine still unpaid after this many days"><input className="input" type="number" min="1" value={s.fineUnpaidDays} onChange={(e) => updateSettings({ fineUnpaidDays: Math.max(1, Number(e.target.value) || 1) })} /></Field>
           <Field label="Warn this many days before a service is due"><input className="input" type="number" min="0" value={s.serviceWarnDays} onChange={(e) => updateSettings({ serviceWarnDays: Math.max(0, Number(e.target.value) || 0) })} /></Field>
         </div>
         <p className="help mt-3">Low-stock warnings use each item's own “reorder level”. Overdue loans, open accidents and spills, and follow-ups that have passed are always flagged.</p>
