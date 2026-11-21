@@ -1,6 +1,6 @@
 import { buildSeed } from '../data/seed';
 import { cleanIsbn, isValidIsbn } from '../domain/isbn';
-import { addDays, duesFor, fineFor, lateDays, libraryForGrade, norm, todayISO } from '../domain/rules';
+import { addDays, duesFor, fineFor, lateDays, libraryForGrade, norm, todayISO, DEFAULT_SECTIONS } from '../domain/rules';
 import {
   bookById, borrowerOf, fineOwed, openLoansOf, studentById,
 } from '../domain/queries';
@@ -10,6 +10,7 @@ import type {
   Memory, NoteCategory, Pending, Prefs, Presence, SlotException, Student,
 } from '../domain/types';
 import { getState, replaceState, setState, setUndo } from './store';
+import { classIdOf } from '../domain/rules';
 
 let counter = Date.now() % 100000;
 const uid = (p: string) => `${p}${(++counter).toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -54,17 +55,35 @@ export function addStudent(input: { name: string; grade: number; section: string
   if (s.students.some((x) => x.grNo.toLowerCase() === grNo.toLowerCase())) return fail(`GR no. ${grNo} already belongs to another student.`);
   const student: Student = { id: uid('s'), grNo, name, grade: input.grade, section: input.section.toUpperCase(), active: true };
   setState((st) => ({ ...st, students: [...st.students, student] }));
-  return done(`${name} added to Class ${student.grade}${student.section}.`);
+  return done(`${name} added to Class ${classIdOf(student.grade, student.section)}.`);
 }
-export function bulkAddStudents(rows: Array<{ name: string; grade: number; section: string; grNo?: string }>): Result {
+export function bulkAddStudents(rows: Array<{ name: string; grade: number; section: string; grNo?: string }>, opts: { createSections?: boolean; skipExisting?: boolean } = {}): Result {
   let added = 0;
+  let skipped = 0;
   const errors: string[] = [];
+  if (opts.createSections) {
+    setState((x) => {
+      const sec = { ...x.sections };
+      for (const r of rows) {
+        const cur = sec[r.grade] ?? [...DEFAULT_SECTIONS];
+        const l = r.section.toUpperCase();
+        if (!cur.includes(l)) sec[r.grade] = [...cur, l].sort();
+        else sec[r.grade] = cur;
+      }
+      return { ...x, sections: sec };
+    });
+  }
+  if (opts.skipExisting) {
+    const have = new Set(getState().students.filter((x) => x.active).map((x) => `${x.grade}|${x.section}|${x.name.toLowerCase()}`));
+    rows = rows.filter((r) => { const dup = have.has(`${r.grade}|${r.section.toUpperCase()}|${r.name.trim().toLowerCase()}`); if (dup) skipped++; return !dup; });
+  }
   rows.forEach((r, i) => {
     const res = addStudent(r);
     if (res.ok) added++;
     else errors.push(`Line ${i + 1}: ${res.errors[0]}`);
   });
-  return errors.length ? { ok: added > 0, errors, message: `${added} added.` } : done(`${added} students added.`);
+  const extra = skipped ? ` ${skipped} already there, skipped.` : '';
+  return errors.length ? { ok: added > 0, errors, message: `${added} added.${extra}` } : done(`${added} students added.${extra}`);
 }
 export function updateStudent(id: string, patch: Partial<Pick<Student, 'name' | 'grNo' | 'grade' | 'section' | 'active'>>): Result {
   const s = getState();
@@ -82,14 +101,14 @@ export function moveStudentSection(id: string, section: string): Result {
   if (st.section === section) return fail('The student is already in that section.');
   const ev: AppEvent = {
     id: uid('e'), date: todayISO(), type: 'student_moved', library: libraryForGrade(st.grade),
-    detail: `${st.name} (${st.grNo}): ${st.grade}${st.section} → ${st.grade}${section}`,
+    detail: `${st.name} (${st.grNo}): ${classIdOf(st.grade, st.section)} → ${classIdOf(st.grade, section)}`,
   };
   setState((x) => ({
     ...x,
     students: x.students.map((k) => (k.id === id ? { ...k, section } : k)),
     events: [ev, ...x.events],
   }));
-  return done(`${st.name} moved from ${st.grade}${st.section} to ${st.grade}${section}.`);
+  return done(`${st.name} moved from ${classIdOf(st.grade, st.section)} to ${classIdOf(st.grade, section)}.`);
 }
 /** Year-end: everyone moves up one class; class 12 students leave. */
 export function promoteAll(): Result {
@@ -544,7 +563,7 @@ export function setChallenge(patch: { target?: number; minPages?: number }) {
 // ---------- classes, sections and the academic year ----------
 export function addSection(grade: number, letter: string): Result {
   const l = letter.trim().toUpperCase();
-  if (!/^[A-Z]$/.test(l)) return fail('A section is a single letter, such as E.');
+  if (!/^[A-Z]{1,12}$/.test(l)) return fail('A section is a letter such as E, or a stream name such as Commerce.');
   const s = getState();
   const cur = s.sections[grade] ?? [];
   if (cur.includes(l)) return fail(`Class ${grade}${l} already exists.`);
@@ -581,6 +600,9 @@ export function startNewYear(plan: YearPlan): Result {
 }
 
 // ---------- settings ----------
+export function setWinterTimingsOn(on: boolean) {
+  setState((s) => ({ ...s, settings: { ...s.settings, winterTimings: on } }));
+}
 export function setStudentDues(patch: Partial<AppState['settings']['studentDues']>) {
   setState((s) => ({ ...s, settings: { ...s.settings, studentDues: { ...s.settings.studentDues, ...patch } } }));
 }

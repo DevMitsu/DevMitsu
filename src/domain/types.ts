@@ -101,6 +101,8 @@ export interface Settings {
   teacherDefault: Dues;
   teacherOverrides: Record<string, Partial<Dues>>;
   notes: Record<NoteCategory, string[]>;
+  /** Winter timings: every lecture runs 30 minutes later. */
+  winterTimings?: boolean;
 }
 
 export interface SlotException {

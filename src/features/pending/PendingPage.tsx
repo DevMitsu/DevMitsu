@@ -11,6 +11,7 @@ import { bookById, borrowerName, borrowerPath, borrowerSub, studentById, unresol
 import { diffDays, formatDate, todayISO } from '../../domain/rules';
 import { closePending } from '../../store/actions';
 import { useStore } from '../../store/store';
+import { classIdOf } from '../../domain/rules';
 
 export function PendingPage() {
   const state = useStore((s) => s);
@@ -21,7 +22,7 @@ export function PendingPage() {
   const [closing, setClosing] = useState<{ id: string; note: string } | null>(null);
 
   const all = unresolvedPending(state).sort((a, b) => a.createdOn.localeCompare(b.createdOn));
-  const classOf = (p: (typeof all)[number]) => (p.borrowerType === 'student' ? (() => { const s = studentById(state, p.borrowerId); return s ? `${s.grade}${s.section}` : ''; })() : 'Teachers');
+  const classOf = (p: (typeof all)[number]) => (p.borrowerType === 'student' ? (() => { const s = studentById(state, p.borrowerId); return s ? `${classIdOf(s.grade, s.section)}` : ''; })() : 'Teachers');
   const classes = [...new Set(all.map(classOf))].sort();
   const list = all.filter((p) => (kind === 'all' || p.kind === kind) && (cls === 'all' || classOf(p) === cls));
   const resolved = state.pending.filter((p) => p.resolvedOn).sort((a, b) => b.resolvedOn!.localeCompare(a.resolvedOn!)).slice(0, 8);

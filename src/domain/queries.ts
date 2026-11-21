@@ -4,6 +4,7 @@ import type {
   AppState, Book, Borrower, Collection, LibraryId, Loan, SlotException, Student, Teacher,
 } from './types';
 import { RANGES } from './rules';
+import { classIdOf } from '../domain/rules';
 
 export const studentById = (s: AppState, id: string) => s.students.find((x) => x.id === id);
 export const teacherById = (s: AppState, id: string) => s.teachers.find((x) => x.id === id);
@@ -18,7 +19,7 @@ export function borrowerName(s: AppState, b: Borrower): string {
 export function borrowerSub(s: AppState, b: Borrower): string {
   if (b.type === 'student') {
     const st = studentById(s, b.id);
-    return st ? `Class ${st.grade}${st.section} · ${st.grNo}` : '';
+    return st ? `Class ${classIdOf(st.grade, st.section)} · ${st.grNo}` : '';
   }
   const t = teacherById(s, b.id);
   return t ? `Teacher · ${t.department}` : '';
@@ -30,7 +31,7 @@ export function openLoansOf(s: AppState, b: Borrower): Loan[] {
 }
 export function studentsOfClass(s: AppState, classId: string): Student[] {
   return s.students
-    .filter((x) => x.active && `${x.grade}${x.section}` === classId)
+    .filter((x) => x.active && `${classIdOf(x.grade, x.section)}` === classId)
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 export function unresolvedPending(s: AppState) {

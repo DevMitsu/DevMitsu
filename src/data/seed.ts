@@ -264,7 +264,7 @@ export function buildSeed(): AppState {
   const presence: AppState['presence'] = {};
   [['9B', 'l3'], ['7A', 'l5'], ['3C', 'l2']].forEach(([cid, slot], k) => {
     const day = addDays(today, -(k + 1));
-    const kids = students.filter((s) => `${s.grade}${s.section}` === cid);
+    const kids = students.filter((s) => `${classIdOf(s.grade, s.section)}` === cid);
     presence[`${day}|${cid}|${slot}`] = Object.fromEntries(kids.map((s, i) => [s.id, i === 2 ? 'absent' : 'present'] as const));
   });
 

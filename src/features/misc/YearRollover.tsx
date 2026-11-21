@@ -7,7 +7,7 @@ import { notify } from '../../components/ui/toast';
 import { Link } from 'react-router-dom';
 import { openLoansOf } from '../../domain/queries';
 import { computeRollover, type RolloverOverride, type YearPlan } from '../../domain/rollover';
-import { gradesFor, sectionsOf } from '../../domain/rules';
+import { gradesFor, sectionsOf, classIdOf } from '../../domain/rules';
 import { startNewYear } from '../../store/actions';
 import { useStore } from '../../store/store';
 import { BulkAddDialog } from '../people/PersonDialogs';
@@ -43,7 +43,7 @@ export function YearRollover() {
 
   const addLetter = (g: number) => {
     const l = (letter[g] ?? '').trim().toUpperCase();
-    if (!/^[A-Z]$/.test(l) || sections[g]!.includes(l)) return;
+    if (!/^[A-Z]{1,12}$/.test(l) || sections[g]!.includes(l)) return;
     setSections({ ...sections, [g]: [...sections[g]!, l].sort() });
     setLetter({ ...letter, [g]: '' });
   };
@@ -108,10 +108,10 @@ export function YearRollover() {
                       <td className="px-3 py-2.5">
                         <span className="flex flex-wrap items-center gap-1.5">
                           {sections[g]!.map((sec) => (
-                            <span key={sec} className="inline-flex items-center gap-1 rounded-control border border-line bg-canvas py-0.5 pr-0.5 pl-2 text-[13px]">{g}{sec}<span className="text-xs text-muted">{counts[sec] ?? 0}</span>
+                            <span key={sec} className="inline-flex items-center gap-1 rounded-control border border-line bg-canvas py-0.5 pr-0.5 pl-2 text-[13px]">{classIdOf(g, sec)}<span className="text-xs text-muted">{counts[sec] ?? 0}</span>
                               <button type="button" disabled={sections[g]!.length <= 1} aria-label={`Remove class ${g}${sec} next year`} onClick={() => setSections({ ...sections, [g]: sections[g]!.filter((x) => x !== sec) })} className="grid size-5 place-items-center rounded text-muted hover:bg-sage hover:text-ink disabled:opacity-30"><X className="size-3.5" aria-hidden /></button></span>
                           ))}
-                          <input aria-label={`New section for class ${g}`} maxLength={1} value={letter[g] ?? ''} onChange={(e) => setLetter({ ...letter, [g]: e.target.value.toUpperCase() })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLetter(g); } }} placeholder="E" className="h-7 w-9 rounded-control border border-line bg-panel text-center text-xs uppercase" />
+                          <input aria-label={`New section for class ${g}`} maxLength={12} value={letter[g] ?? ''} onChange={(e) => setLetter({ ...letter, [g]: e.target.value.toUpperCase() })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLetter(g); } }} placeholder="E" className="h-7 w-24 rounded-control border border-line bg-panel text-center text-xs uppercase" />
                           <Button size="sm" variant="ghost" onClick={() => addLetter(g)} aria-label={`Add section to class ${g}`}>Add</Button>
                         </span>
                       </td>
@@ -133,7 +133,7 @@ export function YearRollover() {
           {find.trim().length > 1 && (
             <ul className="divide-y divide-line rounded-control border border-line">
               {active.filter((x) => `${x.name} ${x.grNo}`.toLowerCase().includes(find.trim().toLowerCase())).slice(0, 6).map((x) => (
-                <li key={x.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm"><span>{x.name} <span className="text-muted">· {x.grade}{x.section}{x.grNo ? ` · ${x.grNo}` : ''}</span></span>
+                <li key={x.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm"><span>{x.name} <span className="text-muted">· {classIdOf(x.grade, x.section)}{x.grNo ? ` · ${x.grNo}` : ''}</span></span>
                   <Button size="sm" disabled={!!overrides[x.id]} onClick={() => { setOverrides({ ...overrides, [x.id]: { action: 'stay' } }); setFind(''); }}>Add exception</Button></li>
               ))}
             </ul>
@@ -147,7 +147,7 @@ export function YearRollover() {
                 const toGrade = o.action === 'to' ? o.grade : st.grade;
                 return (
                   <li key={id} className="flex flex-wrap items-center gap-2 rounded-control border border-line p-2 text-sm">
-                    <span className="min-w-40 flex-1 font-medium">{st.name}<span className="block text-xs font-normal text-muted">now {st.grade}{st.section}</span></span>
+                    <span className="min-w-40 flex-1 font-medium">{st.name}<span className="block text-xs font-normal text-muted">now {classIdOf(st.grade, st.section)}</span></span>
                     <select aria-label={`What happens to ${st.name}`} value={kind} onChange={(e) => { const v = e.target.value; setOverrides({ ...overrides, [id]: v === 'to' ? { action: 'to', grade: Math.min(12, st.grade + 1), section: sections[Math.min(12, st.grade + 1)]?.[0] } : { action: v as 'stay' | 'leave' } }); }} className="h-9 rounded-control border border-line bg-panel px-2 text-sm">
                       <option value="stay">Repeats class {st.grade}</option><option value="to">Goes to a chosen class</option><option value="leave">Leaves school</option>
                     </select>

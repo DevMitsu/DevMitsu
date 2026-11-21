@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ToastHost } from '../../components/ui/toast';
+import { setWinterTimings } from '../../domain/schedule';
+import { useStore } from '../../store/store';
 import { useApplyPrefs } from '../../lib/applyPrefs';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -10,6 +12,7 @@ export function AppShell() {
   const closeNav = useCallback(() => setNavOpen(false), []);
   const { pathname } = useLocation();
   useApplyPrefs();
+  setWinterTimings(useStore((s) => !!s.settings.winterTimings));
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
 
   return (

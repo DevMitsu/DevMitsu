@@ -7,7 +7,7 @@ import { Panel } from '../../components/ui/Panel';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
 import { Tabs } from '../../components/ui/Tabs';
-import { LIBRARIES, libraryForGrade, norm, sectionsOf } from '../../domain/rules';
+import { LIBRARIES, libraryForGrade, norm, sectionsOf, classIdOf } from '../../domain/rules';
 import { openLoansOf } from '../../domain/queries';
 import { useStore } from '../../store/store';
 import { enabledGrades } from '../../sync/config';
@@ -52,7 +52,7 @@ export function StudentsPage() {
             <tbody>{shown.map((s) => (
               <tr key={s.id} className="border-b border-line last:border-b-0 hover:bg-sage-soft/50">
                 <td className="px-4 py-2.5"><Link to={`/student/${s.id}`} className="font-medium text-ink hover:text-accent hover:underline">{s.name}</Link></td>
-                <td className="px-3 py-2.5 text-muted tabular-nums">{s.grNo}</td><td className="px-3 py-2.5">{s.grade}{s.section}</td>
+                <td className="px-3 py-2.5 text-muted tabular-nums">{s.grNo}</td><td className="px-3 py-2.5">{classIdOf(s.grade, s.section)}</td>
                 <td className="px-3 py-2.5"><Badge>{LIBRARIES[libraryForGrade(s.grade)].short}</Badge></td>
                 <td className="px-3 py-2.5 tabular-nums">{openLoansOf(state, { type: 'student', id: s.id }).length}</td>
               </tr>))}</tbody>

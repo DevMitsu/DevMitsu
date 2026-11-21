@@ -8,7 +8,7 @@ import { Panel } from '../../components/ui/Panel';
 import { toast } from '../../components/ui/toast';
 import type { Prefs } from '../../domain/types';
 import { cn } from '../../lib/cn';
-import { backupJson, setPrefs } from '../../store/actions';
+import { backupJson, setPrefs, setWinterTimingsOn } from '../../store/actions';
 import { useStore } from '../../store/store';
 import { ConnectionCard } from './ConnectionCard';
 import { isConnected } from '../../sync/config';
@@ -42,6 +42,7 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
 
 export function SettingsPage() {
   const prefs = useStore((s) => s.prefs);
+  const settings = useStore((s) => s.settings);
   const [busy, setBusy] = useState(false);
   const set = <K extends keyof Prefs>(k: K, v: Prefs[K]) => setPrefs({ [k]: v } as Partial<Prefs>);
 
@@ -86,6 +87,10 @@ export function SettingsPage() {
 
       <Group title="Security">
         <Choice label="Sign out after no activity for" value={String(prefs.idleMinutes)} onChange={(v) => set('idleMinutes', Number(v))} options={[{ value: '15', label: '15 minutes' }, { value: '30', label: '30 minutes' }, { value: '60', label: '1 hour' }, { value: '0', label: 'Never', hint: 'Not advised on a shared computer' }]} />
+      </Group>
+
+      <Group title="School timings" description="Applies to everyone using the library.">
+        <Checkbox checked={!!settings.winterTimings} onChange={(v) => setWinterTimingsOn(v)} label="Winter timings" description="Every lecture and break runs 30 minutes later. Turn off to go back to the normal timings." />
       </Group>
 
       <Group title="Home">

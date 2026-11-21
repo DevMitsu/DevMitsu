@@ -9,6 +9,7 @@ import { cn } from '../../lib/cn';
 import { useStore } from '../../store/store';
 import { enabledLibraries } from '../../sync/config';
 import { signOutTo } from '../AppGate';
+import { classIdOf } from '../../domain/rules';
 
 type Scope = 'all' | 'class' | 'student' | 'teacher' | 'book' | 'author';
 const SCOPES: Array<{ id: Scope; label: string }> = [
@@ -74,14 +75,14 @@ export function GlobalSearch() {
         : !text && scope === 'class' ? all.filter((id) => libraryOfClassId(id) === active) : [];
       list.slice(0, 8).forEach((id) => {
         const lib = libraryOfClassId(id)!;
-        const count = students.filter((s) => s.active && `${s.grade}${s.section}` === id).length;
+        const count = students.filter((s) => s.active && `${classIdOf(s.grade, s.section)}` === id).length;
         out.push({ key: `c-${id}`, group: 'Classes', title: `Class ${id}`, sub: `${count} students · ${LIBRARIES[lib].label}`, tag: lib !== active ? `${LIBRARIES[lib].short} library` : undefined, go: () => goClass(id) });
       });
     }
     if (want('student') && q) {
       const words = q.split(' ');
       students.filter((s) => s.active && words.every((w) => norm(`${s.name} ${s.grNo}`).includes(w))).slice(0, 6).forEach((s) =>
-        out.push({ key: `s-${s.id}`, group: 'Students', title: s.name, sub: `Class ${s.grade}${s.section} · ${s.grNo}`, tag: libraryForGrade(s.grade) !== active ? LIBRARIES[libraryForGrade(s.grade)].short : undefined, go: () => { finish(); navigate(`/student/${s.id}`); } }));
+        out.push({ key: `s-${s.id}`, group: 'Students', title: s.name, sub: `Class ${classIdOf(s.grade, s.section)} · ${s.grNo}`, tag: libraryForGrade(s.grade) !== active ? LIBRARIES[libraryForGrade(s.grade)].short : undefined, go: () => { finish(); navigate(`/student/${s.id}`); } }));
     }
     if (want('teacher') && q) {
       const words = q.split(' ');

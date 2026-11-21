@@ -28,6 +28,14 @@ export const PERIODS: Period[] = [
   { id: 'reflection', label: 'Reflection time', start: '14:35', end: '14:40', kind: 'break' },
 ];
 
+const SUMMER = PERIODS.map((p) => ({ start: p.start, end: p.end }));
+const shiftTime = (hhmm: string, by: number) => { const [h, m] = hhmm.split(':').map(Number); const t = h! * 60 + m! + by; return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+export const WINTER_SHIFT_MINUTES = 30;
+/** Winter timings: moves every lecture and break 30 minutes later. The periods are updated in place so every screen agrees. */
+export function setWinterTimings(on: boolean) {
+  PERIODS.forEach((p, i) => { p.start = shiftTime(SUMMER[i]!.start, on ? WINTER_SHIFT_MINUTES : 0); p.end = shiftTime(SUMMER[i]!.end, on ? WINTER_SHIFT_MINUTES : 0); });
+}
+
 export const LECTURES = PERIODS.filter((p) => p.kind === 'lecture');
 export const DAYS: DayId[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 export const DAY_LABELS: Record<DayId, { short: string; long: string }> = {

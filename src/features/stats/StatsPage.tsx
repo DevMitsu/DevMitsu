@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { bookById, studentById } from '../../domain/queries';
 import { addDays, diffDays, lateDays, LIBRARIES, todayISO } from '../../domain/rules';
 import { useStore } from '../../store/store';
+import { classIdOf } from '../../domain/rules';
 
 function Bars({ items }: { items: Array<[string, number]> }) {
   const max = Math.max(1, ...items.map((i) => i[1]));
@@ -31,7 +32,7 @@ export function StatsPage() {
     recent.forEach((l) => {
       const t = bookById(state, l.bookId)?.title ?? '';
       byBook.set(t, (byBook.get(t) ?? 0) + 1);
-      if (l.borrowerType === 'student') { const s = studentById(state, l.borrowerId); if (s) byClass.set(`Class ${s.grade}${s.section}`, (byClass.get(`Class ${s.grade}${s.section}`) ?? 0) + 1); }
+      if (l.borrowerType === 'student') { const s = studentById(state, l.borrowerId); if (s) byClass.set(`Class ${classIdOf(s.grade, s.section)}`, (byClass.get(`Class ${classIdOf(s.grade, s.section)}`) ?? 0) + 1); }
     });
     const returned = state.loans.filter((l) => l.returnedOn && !l.lost);
     const avg = returned.length ? returned.reduce((n, l) => n + diffDays(l.returnedOn!, l.issuedOn), 0) / returned.length : 0;

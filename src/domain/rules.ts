@@ -15,10 +15,11 @@ export const sectionsOf = (map: Record<number, string[]>, grade: number) => map[
 export const classIdsOf = (map: Record<number, string[]>, lib: LibraryId) =>
   gradesFor(lib).flatMap((g) => sectionsOf(map, g).map((sec) => classIdOf(g, sec)));
 export const allClassIds = (map: Record<number, string[]>) => [...classIdsOf(map, 'jr'), ...classIdsOf(map, 'sr')];
-export const classIdOf = (grade: number, section: string) => `${grade}${section}`;
+/** "9B" for a letter section; "11-COMMERCE" for a stream. */
+export const classIdOf = (grade: number, section: string) => (section.length > 1 ? `${grade}-${section}` : `${grade}${section}`);
 export const classLabel = (id: string) => `Class ${id}`;
 export const parseClassId = (id: string): { grade: number; section: string } | null => {
-  const m = /^(\d{1,2})([A-Za-z])$/.exec(id.trim());
+  const m = /^(\d{1,2})-?([A-Za-z]+)$/.exec(id.trim());
   return m ? { grade: Number(m[1]), section: m[2]!.toUpperCase() } : null;
 };
 

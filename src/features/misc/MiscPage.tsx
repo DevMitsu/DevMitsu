@@ -15,6 +15,7 @@ import { isConnected } from '../../sync/config';
 import { ReadingChallenge } from '../challenge/ReadingChallenge';
 import { ClassesSections } from './ClassesSections';
 import { YearRollover } from './YearRollover';
+import { classIdOf } from '../../domain/rules';
 
 function Section({ id, title, description, children }: { id: string; title: string; description: string; children: ReactNode }) {
   return (
@@ -80,9 +81,9 @@ export function MiscPage() {
       <Section id="move" title="Move a student to another section" description="For example from 9B to 9D. The student’s history stays with them.">
         <div className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
           <div>
-            <TextField label="Find the student" value={picked ? `${picked.name} · ${picked.grNo} · ${picked.grade}${picked.section}` : q} onChange={(v) => { setQ(v); setPick(''); setToSec(''); }} placeholder="Type at least 2 letters of the name or GR no." />
+            <TextField label="Find the student" value={picked ? `${picked.name} · ${picked.grNo} · ${classIdOf(picked.grade, picked.section)}` : q} onChange={(v) => { setQ(v); setPick(''); setToSec(''); }} placeholder="Type at least 2 letters of the name or GR no." />
             {!picked && matches.length > 0 && (
-              <ul className="mt-1.5 overflow-hidden rounded-control border border-line">{matches.map((s) => <li key={s.id} className="border-b border-line last:border-b-0"><button type="button" onClick={() => { setPick(s.id); setToSec(''); }} className="flex w-full justify-between px-3 py-2 text-left text-sm hover:bg-sage-soft"><span className="font-medium">{s.name}</span><span className="text-muted">{s.grade}{s.section} · {s.grNo}</span></button></li>)}</ul>
+              <ul className="mt-1.5 overflow-hidden rounded-control border border-line">{matches.map((s) => <li key={s.id} className="border-b border-line last:border-b-0"><button type="button" onClick={() => { setPick(s.id); setToSec(''); }} className="flex w-full justify-between px-3 py-2 text-left text-sm hover:bg-sage-soft"><span className="font-medium">{s.name}</span><span className="text-muted">{classIdOf(s.grade, s.section)} · {s.grNo}</span></button></li>)}</ul>
             )}
           </div>
           <Select label="New section" value={toSec} onChange={(e) => setToSec(e.target.value)} disabled={!picked}><option value="">Choose…</option>{(picked ? sectionsOf(state.sections, picked.grade) : []).filter((s) => s !== picked?.section).map((s) => <option key={s} value={s}>{picked ? `${picked.grade}${s}` : s}</option>)}</Select>

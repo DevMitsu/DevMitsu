@@ -1,6 +1,7 @@
 import { bookById, borrowerName, borrowerOf, fineOwed } from '../../domain/queries';
 import { diffDays, duesFor, formatDate, LIBRARIES, lateDays, libraryForGrade, norm, todayISO } from '../../domain/rules';
 import type { AppState, EventType, LibraryId } from '../../domain/types';
+import { classIdOf } from '../../domain/rules';
 
 export type ReportId = 'circulation' | 'authors' | 'transfers' | 'added' | 'imports' | 'exports' | 'removed' | 'students' | 'waived';
 export const REPORTS: Array<{ id: ReportId; label: string; hint: string; usesRange: boolean }> = [
@@ -59,9 +60,9 @@ export function buildReport(s: AppState, id: ReportId, o: Opts): Built {
   }
 
   if (id === 'students') {
-    const list = s.students.filter((x) => x.active && (!o.classId || `${x.grade}${x.section}` === o.classId) && (o.library === 'both' || libraryForGrade(x.grade) === o.library))
+    const list = s.students.filter((x) => x.active && (!o.classId || `${classIdOf(x.grade, x.section)}` === o.classId) && (o.library === 'both' || libraryForGrade(x.grade) === o.library))
       .sort((a, b) => a.grade - b.grade || a.section.localeCompare(b.section) || a.name.localeCompare(b.name));
-    return { columns: ['Class', 'GR no.', 'Name', 'Library'], rows: list.map((x) => [`${x.grade}${x.section}`, x.grNo, x.name, LIBRARIES[libraryForGrade(x.grade)].label]) };
+    return { columns: ['Class', 'GR no.', 'Name', 'Library'], rows: list.map((x) => [`${classIdOf(x.grade, x.section)}`, x.grNo, x.name, LIBRARIES[libraryForGrade(x.grade)].label]) };
   }
 
   // circulation
@@ -90,7 +91,7 @@ export function buildReport(s: AppState, id: ReportId, o: Opts): Built {
       const fineRec = s.fines.find((f) => f.loanId === l.id);
       const fine = l.returnedOn ? (fineRec ? fineRec.amount : 0) : late * duesFor(s, b).finePerDay;
       return [
-        p?.name ?? '', p ? ('grade' in p ? `${p.grade}${p.section}` : p.department) : '', book?.title ?? '', book?.author ?? NO_AUTHOR, book?.accession ?? '', book ? LIBRARIES[book.library].label : '',
+        p?.name ?? '', p ? ('grade' in p ? `${classIdOf(p.grade, p.section)}` : p.department) : '', book?.title ?? '', book?.author ?? NO_AUTHOR, book?.accession ?? '', book ? LIBRARIES[book.library].label : '',
         d(l.issuedOn), d(l.dueOn), l.returnedOn ? d(l.returnedOn) : 'Still out', diffDays(l.returnedOn ?? today, l.issuedOn), late, fine,
         [l.lost ? `Lost (${l.lost.outcome})` : '', l.crossNote ? `Cross-library: ${l.crossNote}` : '', fineRec && fineOwed(fineRec) > 0 ? 'Fine owed' : ''].filter(Boolean).join('; '),
       ];

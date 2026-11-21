@@ -10,6 +10,7 @@ import { notify } from '../../components/ui/toast';
 import { diffDays, formatDate, norm, todayISO } from '../../domain/rules';
 import { logChallengeBook, removeChallengeEntry, setChallenge } from '../../store/actions';
 import { useStore } from '../../store/store';
+import { classIdOf } from '../../domain/rules';
 
 /** Each reader reads a set number of long books in the academic year, with no time limit until year end. */
 export function ReadingChallenge() {
@@ -35,8 +36,8 @@ export function ReadingChallenge() {
   }, [entries]);
   const rows = useMemo(() => [...byStudent.entries()].map(([id, list]) => ({ student: state.students.find((s) => s.id === id), list })).filter((r) => r.student)
     .sort((a, b) => b.list.length - a.list.length || a.student!.name.localeCompare(b.student!.name)), [byStudent, state.students]);
-  const classes = [...new Set(rows.map((r) => `${r.student!.grade}${r.student!.section}`))].sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b));
-  const shown = rows.filter((r) => cls === 'all' || `${r.student!.grade}${r.student!.section}` === cls);
+  const classes = [...new Set(rows.map((r) => `${classIdOf(r.student!.grade, r.student!.section)}`))].sort((a, b) => parseInt(a) - parseInt(b) || a.localeCompare(b));
+  const shown = rows.filter((r) => cls === 'all' || `${classIdOf(r.student!.grade, r.student!.section)}` === cls);
   const completed = rows.filter((r) => r.list.length >= challenge.target).length;
   const daysLeft = Math.max(0, diffDays(year.endsOn, today));
 
@@ -81,9 +82,9 @@ export function ReadingChallenge() {
           <ErrorList errors={errors} />
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
-              <TextField label="Reader" value={picked ? `${picked.name} · ${picked.grade}${picked.section} · ${picked.grNo}` : q} onChange={(v) => { setQ(v); setPick(''); setErrors([]); }} placeholder="Type at least 2 letters of the name or GR no." />
+              <TextField label="Reader" value={picked ? `${picked.name} · ${classIdOf(picked.grade, picked.section)} · ${picked.grNo}` : q} onChange={(v) => { setQ(v); setPick(''); setErrors([]); }} placeholder="Type at least 2 letters of the name or GR no." />
               {!picked && matches.length > 0 && (
-                <ul className="mt-1.5 overflow-hidden rounded-control border border-line">{matches.map((s) => <li key={s.id} className="border-b border-line last:border-b-0"><button type="button" onClick={() => setPick(s.id)} className="flex w-full justify-between px-3 py-2 text-left text-sm hover:bg-sage-soft"><span className="font-medium">{s.name}</span><span className="text-muted">{s.grade}{s.section} · {byStudent.get(s.id)?.length ?? 0} of {challenge.target}</span></button></li>)}</ul>
+                <ul className="mt-1.5 overflow-hidden rounded-control border border-line">{matches.map((s) => <li key={s.id} className="border-b border-line last:border-b-0"><button type="button" onClick={() => setPick(s.id)} className="flex w-full justify-between px-3 py-2 text-left text-sm hover:bg-sage-soft"><span className="font-medium">{s.name}</span><span className="text-muted">{classIdOf(s.grade, s.section)} · {byStudent.get(s.id)?.length ?? 0} of {challenge.target}</span></button></li>)}</ul>
               )}
               {picked && <p className="mt-1 text-xs text-muted">{pickedCount} of {challenge.target} books so far{pickedCount >= challenge.target ? '. Already completed.' : '.'}</p>}
             </div>
@@ -110,7 +111,7 @@ export function ReadingChallenge() {
                   <li key={student!.id}>
                     <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : student!.id)} className="flex w-full items-center gap-3 px-5 py-2.5 text-left hover:bg-sage-soft/50">
                       {isOpen ? <ChevronDown className="size-4 shrink-0 text-muted" aria-hidden /> : <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />}
-                      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{student!.name}</span><span className="text-xs text-muted">{student!.grade}{student!.section}</span></span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{student!.name}</span><span className="text-xs text-muted">{classIdOf(student!.grade, student!.section)}</span></span>
                       <span className="hidden w-40 sm:block"><span className="block h-2 rounded-[3px] bg-canvas"><span className="block h-2 rounded-[3px] bg-primary" style={{ width: `${Math.min(100, (n / challenge.target) * 100)}%` }} /></span></span>
                       <span className="w-14 text-right text-sm font-medium tabular-nums">{n} / {challenge.target}</span>
                       {done ? <Badge tone="green">Completed</Badge> : <span className="w-[4.6rem]" />}

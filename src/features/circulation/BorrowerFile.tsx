@@ -17,6 +17,7 @@ import { StudentDialog, TeacherDialog } from '../people/PersonDialogs';
 import { WaiveDialog } from '../fines/WaiveDialog';
 import { IssueReturnPanel } from './IssueReturnPanel';
 import { cn } from '../../lib/cn';
+import { classIdOf } from '../../domain/rules';
 
 type Tab = 'issued' | 'pending' | 'fines' | 'history';
 interface PanelInit { ret: string[]; resolve: string[]; issueText?: string }
@@ -59,11 +60,11 @@ function BorrowerFileInner({ type }: { type: BorrowerType }) {
   const accruing = loans.reduce((n, l) => n + lateDays(l.dueOn, today) * dues.finePerDay, 0);
   const owed = fines.reduce((n, f) => n + fineOwed(f), 0);
   const home = student ? libraryForGrade(student.grade) : null;
-  const backTo = student ? `/class/${student.grade}${student.section}` : '/students?tab=teachers';
+  const backTo = student ? `/class/${classIdOf(student.grade, student.section)}` : '/students?tab=teachers';
 
   return (
     <div>
-      <Link to={backTo} className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"><ArrowLeft className="size-4" aria-hidden />{student ? `Class ${student.grade}${student.section}` : 'Teachers'}</Link>
+      <Link to={backTo} className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"><ArrowLeft className="size-4" aria-hidden />{student ? `Class ${classIdOf(student.grade, student.section)}` : 'Teachers'}</Link>
       <Panel className="mb-6">
         <div className="flex flex-wrap items-start justify-between gap-4 p-5">
           <div className="min-w-0">
@@ -73,7 +74,7 @@ function BorrowerFileInner({ type }: { type: BorrowerType }) {
               {!person.active && <Badge tone="amber">{type === 'student' ? 'Left school' : 'Inactive'}</Badge>}
             </div>
             <p className="mt-1 text-sm text-muted">
-              {student ? `Class ${student.grade}${student.section} · GR no. ${student.grNo}` : `Teacher · ${teacher!.department}`}
+              {student ? `Class ${classIdOf(student.grade, student.section)} · GR no. ${student.grNo}` : `Teacher · ${teacher!.department}`}
             </p>
             <p className="mt-3 text-sm text-ink">
               Holding <span className="font-semibold">{loans.length}</span> of {dues.maxBooks} books

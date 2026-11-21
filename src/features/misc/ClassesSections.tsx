@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { notify } from '../../components/ui/toast';
-import { gradesFor, LIBRARIES, sectionsOf } from '../../domain/rules';
+import { gradesFor, LIBRARIES, sectionsOf, classIdOf } from '../../domain/rules';
 import type { LibraryId } from '../../domain/types';
 import { addSection, removeSection } from '../../store/actions';
 import { useStore } from '../../store/store';
@@ -25,14 +25,14 @@ export function ClassesSections() {
                     const n = state.students.filter((s) => s.active && s.grade === g && s.section === sec).length;
                     return (
                       <li key={sec} className="inline-flex items-center gap-1 rounded-control border border-line bg-canvas py-0.5 pr-0.5 pl-2 text-[13px]">
-                        {g}{sec}<span className="text-xs text-muted">{n}</span>
+                        {classIdOf(g, sec)}<span className="text-xs text-muted">{n}</span>
                         <button type="button" aria-label={`Remove class ${g}${sec}`} onClick={() => notify(removeSection(g, sec))} className="grid size-5 place-items-center rounded text-muted hover:bg-sage hover:text-ink"><X className="size-3.5" aria-hidden /></button>
                       </li>
                     );
                   })}
                 </ul>
                 <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); if (notify(addSection(g, letter[g] ?? ''))) setLetter({ ...letter, [g]: '' }); }}>
-                  <input aria-label={`New section for class ${g}`} maxLength={1} value={letter[g] ?? ''} onChange={(e) => setLetter({ ...letter, [g]: e.target.value.toUpperCase() })} placeholder="E" className="h-8 w-10 rounded-control border border-line bg-panel text-center text-sm uppercase" />
+                  <input aria-label={`New section for class ${g}`} maxLength={12} value={letter[g] ?? ''} onChange={(e) => setLetter({ ...letter, [g]: e.target.value.toUpperCase() })} placeholder="E" className="h-8 w-28 rounded-control border border-line bg-panel text-center text-sm uppercase" />
                   <Button type="submit" size="sm" icon={<Plus className="size-3.5" aria-hidden />} aria-label={`Add section to class ${g}`}>Add</Button>
                 </form>
               </li>

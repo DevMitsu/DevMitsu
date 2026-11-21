@@ -74,8 +74,19 @@ export function BulkAddDialog({ open, onClose }: { open: boolean; onClose: () =>
   const [sec0, setSec0] = useState('');
   const fixed = cls !== '' && sec0 !== '';
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-  const body = /^(sr\.?\s*no|s\.?\s*no|roll|name|student)/i.test(lines[0] ?? '') ? lines.slice(1) : lines;
-  const parsed = body.map((line) => {
+  // The school's "Class wise report": a "Class-Section : 6-A" line, then one numbered student per line, e.g. 1, AARAV DESAI[1]
+  const isReport = lines.some((l) => /^"?Class-Section\s*:/i.test(l));
+  let reportClass: { grade: number; section: string } | null = null;
+  const body = isReport ? lines : /^(sr\.?\s*no|s\.?\s*no|roll|name|student)/i.test(lines[0] ?? '') ? lines.slice(1) : lines;
+  const parsed = body.flatMap((line) => {
+    if (isReport) {
+      const h = /^"?Class-Section\s*:\s*(\d{1,2})\s*-\s*([A-Za-z]{1,12})/i.exec(line);
+      if (h) { reportClass = { grade: Number(h[1]), section: h[2]!.toUpperCase() }; return []; }
+      const cells = line.replace(/"/g, '').split(/[\t,]/).map((x) => x.trim()).filter(Boolean);
+      const raw = (/^\d{1,3}$/.test(cells[0] ?? '') ? cells.slice(1) : cells).join(' ').replace(/\s*\[\d+\]\s*$/, '').trim();
+      if (!reportClass || !raw || /^(#|student name)$/i.test(raw)) return [];
+      return [{ line, name: raw, grade: reportClass.grade, section: reportClass.section, grNo: undefined as string | undefined, ok: ALL_GRADES.includes(reportClass.grade) }];
+    }
     const cells = line.split(/[\t,]/).map((x) => x.trim());
     let name: string, grade: number, section: string, gr: string | undefined;
     if (fixed) {
@@ -86,17 +97,17 @@ export function BulkAddDialog({ open, onClose }: { open: boolean; onClose: () =>
       const [n, g, sec, grNo] = cells; name = n ?? ''; grade = Number(g); section = (sec ?? '').toUpperCase(); gr = grNo;
     }
     const ok = !!name && ALL_GRADES.includes(grade) && !!section && sectionsOf(sectionMap, grade).includes(section.toUpperCase());
-    return { line, name, grade, section: section.toUpperCase(), grNo: gr || undefined, ok };
+    return [{ line, name, grade, section: section.toUpperCase(), grNo: gr || undefined, ok }];
   });
   const good = parsed.filter((p) => p.ok);
 
   const save = () => {
-    const res = bulkAddStudents(good.map(({ name, grade, section, grNo }) => ({ name, grade, section, grNo })));
+    const res = bulkAddStudents(good.map(({ name, grade, section, grNo }) => ({ name, grade, section, grNo })), isReport ? { createSections: true, skipExisting: true } : {});
     setErrors(res.errors);
     if (res.ok && !res.errors.length) { notify(res); onClose(); } else if (res.ok) notify(res);
   };
   return (
-    <Modal open={open} onClose={onClose} size="lg" title="Add many students" description={fixed ? 'One student per line: name, then GR no. if you have it. Paste straight from Excel.' : 'One student per line: name, class, section and optionally the GR no.'}
+    <Modal open={open} onClose={onClose} size="lg" title="Add many students" description={isReport ? 'This is the school’s class-wise report: every class and its students are read from it. New sections are created for you.' : fixed ? 'One student per line: name, then GR no. if you have it. Paste straight from Excel.' : 'One student per line: name, class, section and optionally the GR no.'}
       footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={save} disabled={!good.length}>Add {good.length || ''} student{good.length === 1 ? '' : 's'}</Button></>}>
       <div className="space-y-3">
         <ErrorList errors={errors} />
