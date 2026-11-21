@@ -52,3 +52,7 @@ src/
 ```
 
 All changes go through `store/actions.ts`. To connect a real backend later, replace those functions and the `seed.ts` data source; the screens read through `useStore`.
+
+## Also in this repository
+
+**[`lab-inventory/`](lab-inventory/README.md)** is a separate app for managing the school's Physics, Chemistry and Biology labs: inventory, usage, accidents, spills, loans, requirements and reports. It does not share code or data with the library system.
