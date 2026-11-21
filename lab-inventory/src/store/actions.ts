@@ -737,6 +737,8 @@ export interface SetupInput {
 
 export function completeSetup(input: SetupInput) {
   const fresh = emptyState();
+  const mine = getState().settings;
+  Object.assign(fresh.settings, { theme: mine.theme, textSize: mine.textSize, compact: mine.compact, currentUser: mine.currentUser, lastBackupAt: mine.lastBackupAt, itemColumns: mine.itemColumns });
   fresh.settings.schoolName = input.schoolName.trim() || 'Our School';
   const keep = DEFAULT_LABS.filter((l) => input.labIds.includes(l.id));
   fresh.labs = keep.map((l) => structuredClone(l));

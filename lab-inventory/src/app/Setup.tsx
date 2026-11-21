@@ -4,6 +4,7 @@ import { Icon } from '../components/icons';
 import { Button, Checkbox, Field } from '../components/ui';
 import { DEFAULT_LABS } from '../domain/defaults';
 import { completeSetup } from '../store/actions';
+import { isConnected } from '../sync/config';
 import { useApplyPrefs } from '../lib/applyPrefs';
 
 export function Setup() {
@@ -44,7 +45,7 @@ export function Setup() {
             <p className="help ml-6">Realistic demo items, logs and alerts. One click clears it when you are ready for your own data.</p>
           </div>
           <Button variant="primary" className="w-full py-2.5" disabled={none} onClick={() => completeSetup({ schoolName: school, labIds: labs, extraLabs: extras, sample })}>Open my labs</Button>
-          <p className="text-center text-xs text-faint">Your data stays in this browser. Download a backup regularly from Customise → Data.</p>
+          <p className="text-center text-xs text-faint">{isConnected ? 'The shared database is empty, so you are setting up the labs for everyone. Other computers see this as soon as they sign in.' : 'Your data stays in this browser. Download a backup regularly from Customise → Data & backup.'}</p>
         </div>
       </div>
     </div>

@@ -18,6 +18,15 @@ import { ReportsPage } from './features/reports/ReportsPage';
 import { CustomisePage } from './features/settings/CustomisePage';
 import { StocktakePage } from './features/stocktake/StocktakePage';
 import { useStore } from './store/store';
+import { useEffect } from 'react';
+import { SignIn } from './app/SignIn';
+import { Button } from './components/ui';
+import { initAuth, useAuth } from './sync/auth';
+import { isConnected } from './sync/config';
+import { startSync, stopSync } from './sync/controller';
+import { useSyncState } from './sync/status';
+import { updateSettings } from './store/actions';
+import { signOutAndReload } from './features/settings/signOut';
 import { ConfirmHost, ToastHost } from './components/toast';
 
 function Home() {
@@ -28,7 +37,39 @@ function Home() {
   return <Navigate to={`/${ok ? last : ALL}`} replace />;
 }
 
+function Centered({ children }: { children: React.ReactNode }) {
+  return <div className="grid min-h-full place-items-center p-6 text-center"><div className="max-w-sm space-y-3 text-sm text-muted">{children}</div></div>;
+}
+
+/** Shared mode: connects after sign-in and waits for the shared data before showing anything. */
+function SharedGate({ username }: { username: string }) {
+  const sync = useSyncState();
+  const mine = useStore((s) => s.settings.currentUser);
+  useEffect(() => { void startSync(); }, []);
+  useEffect(() => { if (sync.loaded && !mine) updateSettings({ currentUser: username }); }, [sync.loaded, mine, username]);
+  if (sync.status === 'error' && !sync.loaded) {
+    return (
+      <Centered>
+        <p className="text-base font-semibold text-ink">Could not load the shared data</p>
+        <p>{sync.detail}</p>
+        <div className="flex justify-center gap-2"><Button variant="primary" onClick={async () => { await stopSync(); void startSync(); }}>Try again</Button><Button onClick={signOutAndReload}>Sign out</Button></div>
+      </Centered>
+    );
+  }
+  if (!sync.loaded) return <Centered><p className="text-base font-semibold text-ink">Loading the shared lab data…</p></Centered>;
+  return <Local />;
+}
+
 function Root() {
+  const auth = useAuth();
+  useEffect(() => { if (isConnected) void initAuth(); }, []);
+  if (!isConnected) return <Local />;
+  if (!auth.ready) return <Centered><p>Connecting…</p></Centered>;
+  if (!auth.session) return <><SignIn /><ToastHost /><ConfirmHost /></>;
+  return <SharedGate username={auth.session.username} />;
+}
+
+function Local() {
   const done = useStore((s) => s.setupDone);
   if (!done) return <><Setup /><ToastHost /><ConfirmHost /></>;
   return (

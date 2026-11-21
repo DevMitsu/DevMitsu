@@ -84,14 +84,16 @@ interface ConfirmReq {
   body?: ReactNode;
   confirm: string;
   danger?: boolean;
+  /** If set, the person must type this word before the action is allowed. */
+  typed?: string;
   resolve: (ok: boolean) => void;
 }
 let pending: ConfirmReq | null = null;
 const csubs = new Set<() => void>();
 
-export function confirmDialog(o: { title: string; body?: ReactNode; confirm?: string; danger?: boolean }): Promise<boolean> {
+export function confirmDialog(o: { title: string; body?: ReactNode; confirm?: string; danger?: boolean; typed?: string }): Promise<boolean> {
   return new Promise((resolve) => {
-    pending = { title: o.title, body: o.body, confirm: o.confirm ?? 'Confirm', danger: o.danger, resolve };
+    pending = { title: o.title, body: o.body, confirm: o.confirm ?? 'Confirm', danger: o.danger, typed: o.typed, resolve };
     csubs.forEach((s) => s());
   });
 }
@@ -99,7 +101,8 @@ export function confirmDialog(o: { title: string; body?: ReactNode; confirm?: st
 export function ConfirmHost() {
   const req = useSyncExternalStore((l) => { csubs.add(l); return () => csubs.delete(l); }, () => pending);
   const [, force] = useState(0);
-  useEffect(() => force((x) => x + 1), [req]);
+  const [typed, setTyped] = useState('');
+  useEffect(() => { force((x) => x + 1); setTyped(''); }, [req]);
   if (!req) return null;
   const close = (ok: boolean) => {
     req.resolve(ok);
@@ -114,11 +117,17 @@ export function ConfirmHost() {
       footer={
         <>
           <Button onClick={() => close(false)}>Cancel</Button>
-          <Button variant={req.danger ? 'danger-solid' : 'primary'} className="autofocus" onClick={() => close(true)}>{req.confirm}</Button>
+          <Button variant={req.danger ? 'danger-solid' : 'primary'} className="autofocus" disabled={!!req.typed && typed.trim().toLowerCase() !== req.typed.toLowerCase()} onClick={() => close(true)}>{req.confirm}</Button>
         </>
       }
     >
       <div className="text-sm text-muted">{req.body}</div>
+      {req.typed && (
+        <label className="mt-3 block text-sm">
+          Type <b>{req.typed}</b> to confirm
+          <input className="input mt-1" autoFocus value={typed} onChange={(e) => setTyped(e.target.value)} />
+        </label>
+      )}
     </Modal>
   );
 }

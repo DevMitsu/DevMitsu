@@ -11,6 +11,10 @@ import { scopePath, useScope } from '../lib/scope';
 import { openItem, openRecord, useUi } from '../lib/ui';
 import { updateSettings } from '../store/actions';
 import { STORAGE_LIMIT_CHARS, undo, useMeta, useStore } from '../store/store';
+import { getAuth } from '../sync/auth';
+import { isConnected } from '../sync/config';
+import { useSyncState } from '../sync/status';
+import { signOutAndReload } from '../features/settings/signOut';
 import { RecordEditor } from '../features/records/RecordEditor';
 import { ItemDialog } from '../features/inventory/ItemDialog';
 import { AdjustDialog, ReceiveDialog, ReceiveRequirementDialog, ReturnDialog, TransferDialog } from '../features/inventory/StockDialogs';
@@ -88,6 +92,7 @@ export function AppShell() {
           <GlobalSearch />
           <div className="ml-auto flex items-center gap-1.5">
             <NewMenu />
+            {isConnected && <SyncPill />}
             <button className="btn btn-ghost btn-icon" aria-label={meta.canUndo ? `Undo: ${meta.undoLabel}` : 'Nothing to undo'} title={meta.canUndo ? `Undo: ${meta.undoLabel}` : 'Nothing to undo'} disabled={!meta.canUndo} onClick={() => { const l = undo(); if (l) notify(`Undid: ${l}`, 'info'); }}><Undo2 className="h-4.5 w-4.5" /></button>
             <button className="btn btn-ghost btn-icon relative" aria-label={`Alerts: ${alerts.length}`} onClick={() => navigate(to('alerts'))}>
               <Bell className="h-4.5 w-4.5" />{high > 0 && <span className="absolute top-0.5 right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-[var(--c-danger)] px-1 text-[10px] font-bold text-white">{high}</span>}
@@ -156,6 +161,24 @@ function NewMenu() {
   );
 }
 
+function SyncPill() {
+  const sync = useSyncState();
+  const navigate = useNavigate();
+  const { scope } = useScope();
+  const look = {
+    live: { dot: 'var(--t-green-fg)', text: 'Shared' },
+    saving: { dot: 'var(--t-amber-fg)', text: 'Saving…' },
+    connecting: { dot: 'var(--t-amber-fg)', text: 'Connecting…' },
+    offline: { dot: 'var(--t-red-fg)', text: 'Offline' },
+    error: { dot: 'var(--t-red-fg)', text: 'Problem' },
+  }[sync.status];
+  return (
+    <button className="btn btn-ghost text-xs" title={sync.detail ?? (sync.status === 'offline' ? 'No connection: your changes are kept and will be saved when it returns.' : 'Live: changes are shared with everyone as they happen.')} onClick={() => navigate(scopePath(scope, 'customise/data'))}>
+      <span className="h-2 w-2 rounded-full" style={{ background: look.dot }} /><span className="hidden sm:inline">{look.text}</span>
+    </button>
+  );
+}
+
 function WorkingAs() {
   const people = useStore((s) => s.people).filter((p) => p.active);
   const me = useStore((s) => s.settings.currentUser);
@@ -165,7 +188,8 @@ function WorkingAs() {
         <p className="mb-2 text-xs text-muted">Entries and changes are stamped with this name, so the logs show who did what.</p>
         <input className="input mb-2" list="who" placeholder="Your name" defaultValue={me} onBlur={(e) => updateSettings({ currentUser: e.target.value.trim() })} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
         <datalist id="who">{people.map((p) => <option key={p.id} value={p.name} />)}</datalist>
-        {me && <Button size="sm" variant="ghost" onClick={() => updateSettings({ currentUser: '' })}>Clear</Button>}
+        {me && !isConnected && <Button size="sm" variant="ghost" onClick={() => updateSettings({ currentUser: '' })}>Clear</Button>}
+        {isConnected && <div className="mt-1 border-t pt-2"><p className="mb-1.5 text-xs text-muted">Signed in as <b>{getAuth().session?.username}</b></p><Button size="sm" onClick={signOutAndReload}>Sign out</Button></div>}
       </div>
     </Popover>
   );

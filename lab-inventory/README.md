@@ -2,13 +2,13 @@
 
 Inventory and record-keeping for a school's **Physics, Chemistry and Biology labs**: equipment, chemicals and specimens, who used what, accidents, spills, breakage, loans, maintenance, and what the lab needs to buy. Each lab is kept separate, with an "All labs" view across them.
 
-It runs entirely in the browser. There is no server, no account and nothing is uploaded.
+It runs entirely in the browser. On its own there is no server, no account and nothing is uploaded. If you want several teachers on several computers to share the same records live, connect it to a free Supabase database: see [docs/SETUP-SUPABASE.md](docs/SETUP-SUPABASE.md).
 
 ## Just want to use it?
 
 Open **`releases/lab-inventory.html`** (double-click it, or put it on a pendrive). On first run, pick your labs and choose whether to start with sample data so you can look around.
 
-> **Your data is stored in the browser on that computer.** Use **Customise → Data & backup → Download backup** regularly. The same backup file moves everything to another computer. The app reminds you when the last backup is more than two weeks old.
+> **On its own, your data is stored in the browser on that computer.** (With a shared database connected, it is stored there instead.) Use **Customise → Data & backup → Download backup** regularly. The same backup file moves everything to another computer. The app reminds you when the last backup is more than two weeks old.
 
 ## What it does
 
@@ -51,9 +51,14 @@ Built-in questions that the app's logic depends on (for example the item and qua
 
 ## Limits worth knowing
 
-- **One computer, no login.** Data lives in one browser's storage, so two people at two computers do not see each other's changes. Entries are stamped with the "Working as…" name in the top bar, which records *who*, but it is not a security feature. Sharing across computers, user accounts and permissions would need a server (the library app next to this one shows one way to do that with Supabase).
-- **Capacity.** Browsers allow about 5 MB of storage. As a guide every 2,000 log entries take about 1 MB, so a typical lab has years of headroom. The app shows how full storage is and warns at 70%.
+- **On its own: one computer, no login.** Data lives in one browser's storage, so two people at two computers do not see each other's changes. Connect a Supabase database to share (see below).
+- **Shared mode has no separate roles.** Everyone with a login can change everything, and there is no per-lab permission. Entries are stamped with the signed-in name so the logs show who did what.
+- **Capacity (on its own).** Browsers allow about 5 MB of storage. As a guide every 2,000 log entries take about 1 MB, so a typical lab has years of headroom. The app shows how full storage is and warns at 70%. In shared mode the data lives in Supabase and this limit does not apply.
 - **Dates and quantities are plain values**, with no time zones. Renaming a choice in a list does not rewrite old entries that used the old name.
+
+## Sharing between computers (Supabase)
+
+Connect a free Supabase project and every teacher and lab assistant, on any computer or phone, signs in with their own username and sees the same labs live. Changes appear on the other computers within a second or two; if the connection drops the app keeps working and saves when it returns. Stock quantities are worked out from the stock history on every computer, so two people using the same chemical at the same moment are both counted. The full setup (about 20 minutes, no coding) is in [docs/SETUP-SUPABASE.md](docs/SETUP-SUPABASE.md); the database is created by running `supabase/schema.sql`.
 
 ## For developers
 
@@ -82,6 +87,12 @@ Two ideas hold it together:
 1. **Forms are data.** A log is a `ModuleDef`: a list of `FieldDef`s plus a few flags. The same `FieldGrid` renders every form, and the same `RecordsPage` lists every log, so a custom log gets the whole feature set for free. A module's `kind` (`usage`, `spill`, `breakage`, `disposal`, `loan`, `requisition`, `maintenance`…) is what attaches behaviour such as stock effects, loan availability, or receiving an order.
 2. **Stock is a ledger.** `Item.quantity` is only changed by `pushTxn` in `store/actions.ts`, which appends a `StockTxn`. Editing or deleting a log entry writes a reversing `correction` line and applies the new effect, so history is never rewritten. All changes go through `mutate()`, so they are atomic (a thrown rule violation changes nothing), undoable and saved automatically.
 
-To use a server later, replace `store/store.ts` persistence; the screens only read through `useStore` and write through `actions.ts`.
+Sharing is a separate layer in `src/sync/` and does not change the screens or `actions.ts`:
+
+- `records.ts` turns the state into rows (`snapshot`) and rows back into state (`applyChanges`). An item's `quantity` and a ledger line's `balance` are **not stored**: every computer rebuilds them from the append-only ledger (`rebuildLedger`), which is why concurrent stock use cannot lose a deduction.
+- `engine.ts` compares the state with what the database last held, sends the difference as one atomic batch, applies other computers' changes as they arrive, retries when offline, and never overwrites an unsaved local edit with an incoming one. It talks to a `Remote`: `supabaseRemote.ts` is the real database and `memoryRemote.ts` is a stand-in shared between browser tabs (`config { mode: 'memory' }`, password `lab123`) used for testing.
+- In shared mode `store.ts` keeps no local copy of the data, and undo is limited to the time before another computer's change arrives.
+
+`npm test` includes tests with two simulated computers and a fake database (`src/sync/sync.test.ts`).
 
 `releases/lab-inventory.html` is the output of `npm run build:single`. Rebuild it after changing the code.

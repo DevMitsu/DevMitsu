@@ -7,6 +7,8 @@ import { daysBetween, fmtDateTime, todayStr } from '../../domain/dates';
 import type { AppState } from '../../domain/types';
 import { clearData, resetEverything } from '../../store/actions';
 import { STORAGE_LIMIT_CHARS, exportJSON, replaceState, useMeta, useStore } from '../../store/store';
+import { isConnected } from '../../sync/config';
+import { ConnectionCard } from './ConnectionCard';
 import { downloadBackup } from './backup';
 
 export function DataTab() {
@@ -29,9 +31,9 @@ export function DataTab() {
       return;
     }
     const ok = await confirmDialog({
-      title: 'Replace everything with this backup?',
+      title: isConnected ? 'Replace the shared data with this backup, for everyone?' : 'Replace everything with this backup?',
       body: <>This backup holds <b>{data.items.length}</b> items, <b>{data.records?.length ?? 0}</b> log entries and <b>{data.labs.length}</b> labs. Everything currently in the app is replaced. Download a backup of the current data first if you might want it back.</>,
-      confirm: 'Replace with backup', danger: true,
+      confirm: 'Replace with backup', danger: true, typed: isConnected ? 'REPLACE' : undefined,
     });
     if (ok) attempt(() => replaceState({ ...data, setupDone: true }), 'Backup restored');
   };
@@ -43,10 +45,12 @@ export function DataTab() {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card className="lg:col-span-2">
+      <ConnectionCard />
+
+      {!isConnected && <Card className="lg:col-span-2">
         <h2 className="mb-1 font-semibold">Where your data lives</h2>
         <p className="text-sm text-muted">Everything is stored <b>in this browser on this computer</b>: about {kb} KB so far ({pct}% of what the browser allows), with {state.items.length} items and {state.records.length} log entries. As a guide, every 2,000 log entries take about 1 MB. Nothing is sent anywhere. That keeps it private and working offline, but it also means clearing the browser's site data, or using another computer, would not bring it along. <b>A backup file is your safety net.</b></p>
-      </Card>
+      </Card>}
 
       <Card>
         <h2 className="mb-1 font-semibold">Backup</h2>
@@ -67,13 +71,13 @@ export function DataTab() {
       <Card>
         <h2 className="mb-1 font-semibold">Start with your own data</h2>
         <p className="mb-3 text-sm text-muted">Remove every item, log entry, practical, person and supplier. Your labs, categories, forms, lists and settings stay exactly as you customised them.</p>
-        <Button variant="danger" onClick={async () => { if (await confirmDialog({ title: 'Remove all items and logs?', body: 'Your customisation is kept. Download a backup first if you might want the data again.', confirm: 'Remove data', danger: true })) tryDo(() => clearData(), 'All data removed'); }}><Trash2 className="h-4 w-4" /> Remove all data, keep customisation</Button>
+        <Button variant="danger" onClick={async () => { if (await confirmDialog({ title: isConnected ? 'Remove all items and logs for everyone?' : 'Remove all items and logs?', body: isConnected ? 'Every computer sharing this database loses them. Your customisation is kept. Download a backup first.' : 'Your customisation is kept. Download a backup first if you might want the data again.', confirm: 'Remove data', danger: true, typed: isConnected ? 'REMOVE' : undefined })) tryDo(() => clearData(), 'All data removed'); }}><Trash2 className="h-4 w-4" /> Remove all data, keep customisation</Button>
       </Card>
 
       <Card>
         <h2 className="mb-1 font-semibold">Start completely over</h2>
         <p className="mb-3 text-sm text-muted">Erases everything, including labs, categories and forms, and shows the first-time setup again.</p>
-        <Button variant="danger" onClick={async () => { if (await confirmDialog({ title: 'Erase everything?', body: 'All data and all customisation will be lost for good. Download a backup first.', confirm: 'Erase everything', danger: true })) resetEverything(); }}><RotateCcw className="h-4 w-4" /> Erase everything</Button>
+        <Button variant="danger" onClick={async () => { if (await confirmDialog({ title: isConnected ? 'Erase the shared database for everyone?' : 'Erase everything?', body: isConnected ? 'All data and all customisation is deleted from the shared database and from every computer using it. Download a backup first.' : 'All data and all customisation will be lost for good. Download a backup first.', confirm: 'Erase everything', danger: true, typed: isConnected ? 'ERASE' : undefined })) resetEverything(); }}><RotateCcw className="h-4 w-4" /> Erase everything</Button>
       </Card>
 
       <Card className="lg:col-span-2" pad={false}>

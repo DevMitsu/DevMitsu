@@ -14,6 +14,7 @@ import { openItem, openRecord, setUi } from '../../lib/ui';
 import { clearData } from '../../store/actions';
 import { useStore } from '../../store/store';
 import { recordDay } from '../records/helpers';
+import { isConnected } from '../../sync/config';
 import { downloadBackup } from '../settings/backup';
 
 export function DashboardPage() {
@@ -72,7 +73,7 @@ export function DashboardPage() {
       {state.sample && (
         <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl tone-blue p-3 text-sm">
           <span><b>You are looking at sample data.</b> Explore freely, then clear it to start with your own lab. Your labs, categories, forms and lists are kept.</span>
-          <Button size="sm" onClick={async () => { if (await confirmDialog({ title: 'Clear the sample data?', body: 'All sample items, logs, practicals and people are removed. Your customisation stays.', confirm: 'Clear sample data', danger: true })) tryDo(() => clearData(), 'Sample data cleared'); }}>Clear sample data</Button>
+          <Button size="sm" onClick={async () => { if (await confirmDialog({ title: 'Clear the sample data?', body: isConnected ? 'All sample items, logs, practicals and people are removed for everyone sharing this database. Your customisation stays.' : 'All sample items, logs, practicals and people are removed. Your customisation stays.', confirm: 'Clear sample data', danger: true })) tryDo(() => clearData(), 'Sample data cleared'); }}>Clear sample data</Button>
         </div>
       )}
       {needBackup && (

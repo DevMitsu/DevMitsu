@@ -1,26 +1,55 @@
 import { produce, type Draft } from 'immer';
 import { useSyncExternalStore } from 'react';
-import { emptyState, migrate } from '../domain/defaults';
+import { DEFAULT_SETTINGS, emptyState, migrate } from '../domain/defaults';
 import { stamp } from '../domain/dates';
 import { uid } from '../domain/ids';
-import type { AppState } from '../domain/types';
+import type { AppState, Settings } from '../domain/types';
+import { isConnected } from '../sync/config';
+import type { StoreApi } from '../sync/engine';
 
 const KEY = 'labinventory.data.v1';
+const PREFS_KEY = 'labinventory.prefs.v1';
+export const BEFORE_SYNC_KEY = `${KEY}.before-sync`;
 const MAX_UNDO = 40;
 const MAX_ACTIVITY = 600;
 
+/** Settings that belong to one computer, not to the school. They are never shared. */
+const DEVICE_SETTINGS = ['theme', 'textSize', 'compact', 'currentUser', 'lastBackupAt', 'itemColumns'] as const satisfies readonly (keyof Settings)[];
+
+/**
+ * Shared mode: the data lives in the shared database and this computer keeps no copy of it
+ * (a lab PC should not hold the school's records after someone signs out). Only this computer's preferences are kept.
+ */
+const persistData = !isConnected;
+
 // ------------------------------------------------------------ persistence
+
+function readPrefs(): Partial<Settings> {
+  try {
+    return JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Partial<Settings>;
+  } catch {
+    return {};
+  }
+}
+
+function parseSaved(raw: string): AppState {
+  const parsed = JSON.parse(raw) as AppState;
+  if (!parsed || !Array.isArray(parsed.items) || !Array.isArray(parsed.labs)) throw new Error('shape');
+  return migrate(parsed);
+}
 
 let initialChars = 0;
 
 function read(): AppState {
+  if (!persistData) {
+    const e = emptyState();
+    return { ...e, settings: { ...e.settings, ...readPrefs() } };
+  }
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return emptyState();
     initialChars = raw.length;
-    const parsed = JSON.parse(raw) as AppState;
-    if (!parsed || !Array.isArray(parsed.items) || !Array.isArray(parsed.labs)) throw new Error('shape');
-    return migrate(parsed);
+    return parseSaved(raw);
   } catch {
     // Keep whatever was there so it can be recovered, then start clean rather than crash.
     try {
@@ -34,7 +63,7 @@ function read(): AppState {
 }
 
 let state: AppState = read();
-let past: AppState[] = [];
+let past: { state: AppState; label: string }[] = [];
 const listeners = new Set<() => void>();
 
 // Small separate store for things that are about the app, not the data.
@@ -48,12 +77,12 @@ interface Meta {
 }
 export const STORAGE_LIMIT_CHARS = 5_000_000;
 let meta: Meta = { canUndo: false, undoLabel: '', saveError: '', lastSavedAt: 0, usedChars: initialChars };
-let undoLabels: string[] = [];
 const metaListeners = new Set<() => void>();
 function setMeta(p: Partial<Meta>) {
   meta = { ...meta, ...p };
   metaListeners.forEach((l) => l());
 }
+const syncUndoMeta = () => setMeta({ canUndo: past.length > 0, undoLabel: past[past.length - 1]?.label ?? '' });
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let dirty = false;
@@ -66,10 +95,14 @@ function save() {
     return;
   }
   try {
-    const json = JSON.stringify(state);
-    localStorage.setItem(KEY, json);
+    localStorage.setItem(PREFS_KEY, JSON.stringify(Object.fromEntries(DEVICE_SETTINGS.map((k) => [k, state.settings[k]]))));
+    if (persistData) {
+      const json = JSON.stringify(state);
+      localStorage.setItem(KEY, json);
+      setMeta({ usedChars: json.length });
+    }
     dirty = false;
-    setMeta({ saveError: '', lastSavedAt: Date.now(), usedChars: json.length });
+    setMeta({ saveError: '', lastSavedAt: Date.now() });
   } catch (e) {
     setMeta({
       saveError:
@@ -96,13 +129,13 @@ if (typeof window !== 'undefined') {
     if (document.visibilityState === 'hidden') flushSave();
   });
   // Another tab changed the data: take its version so the two tabs never overwrite each other.
+  // (In shared mode the database does this job.)
   window.addEventListener('storage', (e) => {
-    if (e.key !== KEY || e.newValue == null) return;
+    if (!persistData || e.key !== KEY || e.newValue == null) return;
     try {
       state = migrate(JSON.parse(e.newValue) as AppState);
       past = [];
-      undoLabels = [];
-      setMeta({ canUndo: false, undoLabel: '' });
+      syncUndoMeta();
       listeners.forEach((l) => l());
     } catch {
       /* ignore */
@@ -161,38 +194,37 @@ export function mutate<T>(label: string, fn: (d: Draft<AppState>) => T, opts: Mu
   });
   if (next === state) return result;
   if (!opts.noUndo) {
-    past.push(state);
-    undoLabels.push(label);
-    if (past.length > MAX_UNDO) {
-      past.shift();
-      undoLabels.shift();
-    }
+    past.push({ state, label });
+    if (past.length > MAX_UNDO) past.shift();
   }
   state = next;
   listeners.forEach((l) => l());
-  setMeta({ canUndo: past.length > 0, undoLabel: undoLabels[undoLabels.length - 1] ?? '' });
+  syncUndoMeta();
   scheduleSave();
   return result;
 }
 
+/**
+ * Undoes the last change. Returns its label, or null if there is nothing to undo.
+ * In shared mode an undo is only possible until a change from another computer arrives, because going back to an
+ * older snapshot would also undo what other people did in the meantime.
+ */
 export function undo(): string | null {
   const prev = past.pop();
-  const label = undoLabels.pop() ?? '';
   if (!prev) return null;
-  state = prev;
+  state = prev.state;
   listeners.forEach((l) => l());
-  setMeta({ canUndo: past.length > 0, undoLabel: undoLabels[undoLabels.length - 1] ?? '' });
+  syncUndoMeta();
   scheduleSave();
-  return label;
+  return prev.label;
 }
 
 /** Replace everything (restore a backup, start over). Clears undo. */
 export function replaceState(next: AppState) {
   state = migrate(next);
   past = [];
-  undoLabels = [];
   listeners.forEach((l) => l());
-  setMeta({ canUndo: false, undoLabel: '' });
+  syncUndoMeta();
   scheduleSave();
   flushSave();
 }
@@ -200,3 +232,76 @@ export function replaceState(next: AppState) {
 export function exportJSON(): string {
   return JSON.stringify(state, null, 1);
 }
+
+// ------------------------------------------------------------ shared mode
+
+/** What the sync engine uses to read and change the app's data. */
+export const storeApi: StoreApi = {
+  get: getState,
+  set(next) {
+    state = migrate(next);
+    past = [];
+    listeners.forEach((l) => l());
+    syncUndoMeta();
+    scheduleSave();
+  },
+  update(fn) {
+    state = fn(state);
+    past = []; // see undo(): older snapshots no longer include what just arrived
+    listeners.forEach((l) => l());
+    syncUndoMeta();
+    scheduleSave();
+  },
+  subscribe,
+};
+
+/** The record this computer kept before it was connected to the shared database, if there is one with data in it. */
+export function readLocalSaved(): AppState | null {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    const s = parseSaved(raw);
+    return s.setupDone && (s.items.length || s.records.length) ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Sets the old local copy aside so it is neither lost nor adopted a second time. */
+export function setLocalSavedAside() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      localStorage.setItem(BEFORE_SYNC_KEY, raw);
+      localStorage.removeItem(KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** The copy that was set aside, for "restore what this computer had before". */
+export function readBeforeSync(): AppState | null {
+  try {
+    const raw = localStorage.getItem(BEFORE_SYNC_KEY);
+    return raw ? parseSaved(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Writes the current data as this computer's own copy, so it keeps working on its own after disconnecting. */
+export function saveCurrentAsLocal() {
+  localStorage.setItem(KEY, JSON.stringify(state));
+}
+
+/** Removes this computer's copy of data (after signing out of the shared database). */
+export function wipeLocalData() {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export { DEFAULT_SETTINGS };
