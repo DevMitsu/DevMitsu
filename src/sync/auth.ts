@@ -3,7 +3,7 @@ import { LIBRARIES } from '../domain/rules';
 import { session as store } from '../lib/session';
 import type { LibraryId } from '../domain/types';
 import { changePassword as changeLocalPassword, checkPassword } from '../store/actions';
-import { config, emailFor, isConnected, usernames } from './config';
+import { config, emailFor, isConnected, LOGIN_DOMAIN, usernames } from './config';
 import { supabase } from './supabaseRemote';
 
 export interface Session { library: LibraryId; username: string }
@@ -25,7 +25,8 @@ export async function initAuth() {
   if (!isConnected || config?.mode === 'memory') { set({ ready: true, session: readSession() }); return; }
   const db = supabase();
   const fromSupabase = (email: string | undefined | null): Session | null => {
-    const username = email?.split('@')[0] ?? '';
+    const e = (email ?? '').toLowerCase();
+    const username = e.endsWith(`@${LOGIN_DOMAIN}`) ? e.split('@')[0]! : e;
     const library = libraryOfUsername(username);
     return library ? { library, username } : null;
   };

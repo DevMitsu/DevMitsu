@@ -20,7 +20,8 @@ export interface SyncConfig {
 export const DEFAULT_USERNAMES: Record<LibraryId, string> = { sr: 'sr-library', jr: 'jr-library' };
 /** Usernames become sign-in emails on this made-up domain. No email is ever sent. */
 export const LOGIN_DOMAIN = 'alexandria-app.com';
-export const emailFor = (username: string) => `${username.trim().toLowerCase()}@${LOGIN_DOMAIN}`;
+/** A username such as "sr-library" becomes sr-library@alexandria-app.com; a full email address is used as it is. */
+export const emailFor = (username: string) => { const u = username.trim().toLowerCase(); return u.includes('@') ? u : `${u}@${LOGIN_DOMAIN}`; };
 
 declare global {
   interface Window { ALEXANDRIA_CONFIG?: Partial<SyncConfig> }
